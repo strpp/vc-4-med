@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Doctor</title>
+</head>
+<body>
+    <h1>Generate the prescription</h1>
+    <p>Fill the form with patient and drug details</p>
+    <form action="/generate-credential" method="post">
+        <input type="hidden" name="vc" id="vc" value="Prescription">
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name"><br><br>
+        <label for="surname">Surname:</label>
+        <input type="text" id="surname" name="surname"><br><br>
+        <label for="drug">Drug:</label>
+        <input type="text" id="drug" name="drug"><br><br>
+        <label for="dosage">Dosage:</label>
+        <input type="number" id="dosage" name="dosage"><br><br>
+        <input type="submit" value="Submit">
+    </form>
+</body>
+</html>
