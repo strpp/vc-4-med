@@ -20,6 +20,7 @@ async def endpoint(red):
 
     #try redis
     stream_id = request.args.get('stream_id')
+    print(f'Stream ID: {stream_id}')
     data = red.get(stream_id)
     print(data)
 
@@ -100,5 +101,5 @@ def generate_credential(red):
         #red.set(stream_id, json.dumps(data))
 
         #Generate QR Code
-        url = f'http:192.168.1.20/?stream_id={stream_id}'
+        url = f'http:192.168.1.20/endpoint?stream_id={stream_id}'
         return render_template('qrcode.html', url=url)
