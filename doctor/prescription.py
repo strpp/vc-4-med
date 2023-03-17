@@ -17,12 +17,12 @@ def init_app(app, red) :
 
 # API to interact with smartphone (wallet)
 async def endpoint(red):
-
-    #try redis
-    stream_id = request.args.get('stream_id')
-    print(f'Stream ID: {stream_id}')
-    data = red.get(stream_id)
-    print(data)
+    try:
+        stream_id = request.args.get('stream_id')
+        print(f'Stream ID: {stream_id}')
+        data = red.get(stream_id)
+    except:
+        return jsonify('Bad request: missing or invalid stream_id'), 400
 
     credential = json.load(open('credentials/Prescription.jsonld', 'r'))
     credential["issuer"] = did
@@ -35,13 +35,14 @@ async def endpoint(red):
         credential_manifest['issuer']['id'] = did
         credential_manifest['output_descriptors'][0]['id'] = '1234'
         credential['id'] = "did:example:1234"
-        credential['credentialSubject']['id'] = "pr1"
+        credential['credentialSubject']['id'] = "did:example:1234"
         credential_offer = {
             "type": "CredentialOffer",
             "credentialPreview": credential,
             "expires" : '2024-02-20T18:15:39Z',
             "credential_manifest" : credential_manifest
         }
+        print(jsonify(credential_offer))
         return jsonify(credential_offer)
 
     else :  #POST
@@ -56,10 +57,10 @@ async def endpoint(red):
                 "id": "did:example:123",
                 "claim": {
                     "@type": "MedicalPrescription",
-                    "name": 'Tommaso',
-                    "surname": 'Baldo',
-                    "drug": 'Tachipirina',
-                    "dosage": '1'
+                    "name": data['name'],
+                    "surname": data['surname'],
+                    "drug": data['drug'],
+                    "dosage": data['dosage']
                 }
             }
         }
@@ -77,6 +78,7 @@ async def endpoint(red):
         return jsonify(signed_credential)
 
 def generate_credential(red):
+        
         #Generate stream id
         stream_id = str(uuid.uuid4())
 
@@ -98,8 +100,8 @@ def generate_credential(red):
                   data[k] = request.form[k]
         
         #Save on Redis using stream_id as key
-        #red.set(stream_id, json.dumps(data))
+        red.set(stream_id, json.dumps(data))
 
         #Generate QR Code
-        url = f'http:192.168.1.20/endpoint?stream_id={stream_id}'
+        url = f'http:192.168.1.20:5000/endpoint?stream_id={stream_id}'
         return render_template('qrcode.html', url=url)
