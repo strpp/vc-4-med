@@ -3,7 +3,7 @@ from datetime import timedelta, datetime
 import json
 import uuid
 import didkit
-import web3
+from web3 import Web3
 
 #Keypair generated with DIDkit
 jwk = json.dumps(json.load(open("key.pem", "r")))
@@ -20,30 +20,43 @@ def init_app(app, red) :
 # API to interact with smartphone (wallet)
 async def endpoint(stream_id, red):
 
-    try:
-        print(f'Stream ID: {stream_id}')
-        data = json.loads(red.get(stream_id).decode())
-        drug = data['drug']
-        dosage = data['dosage']
-    except:
-        return jsonify('Bad request: missing or invalid stream_id'), 400
-
-    credential = json.load(open('credentials/Prescription.jsonld', 'r'))
-    credential["issuer"] = did
-    credential['issuanceDate'] = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
-    credential['expirationDate'] =  (datetime.now() + timedelta(days= 365)).isoformat() + "Z"
     
-    if request.method == 'GET': 
+    if request.method == 'GET':
+        
+        try:
+            print(f'Stream ID: {stream_id}')
+            data = json.loads(red.get(stream_id).decode())
+            drug = data['drug']
+            dosage = data['dosage']
+        except:
+            return jsonify('Bad request: missing or invalid stream_id'), 400
+        
         # make an offer  
         credential_manifest = json.load(open('credentials/prescription_credential_manifest.json', 'r'))
         credential_manifest['issuer']['id'] = did
-        credential_manifest['output_descriptors'][0]['id'] = '1234'
+        credential_manifest['output_descriptors'][0]['id'] = f'did:example:{stream_id}'
         # fill with doctor and prescription details
         credential_manifest['output_descriptors'][0]['display']['subtitle']['fallback'] = f'A prescription for n.{dosage} of {drug}'
         credential_manifest['output_descriptors'][0]['display']['properties'][0]['fallback'] = doctor
-        credential['id'] = "did:example:1234"
+
+        credential = json.load(open('credentials/Prescription.jsonld', 'r'))
+        credential["issuer"] = did
+        credential['issuanceDate'] = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+        credential['expirationDate'] =  (datetime.now() + timedelta(days= 365)).isoformat() + "Z"
+        credential['id'] = f'did:example:{stream_id}'
         # use keccak hash to optimize smart contract
-        credential['credentialSubject']['id'] = web3.keccak(text=stream_id)
+        credential['credentialSubject']['id'] = (Web3.keccak(text=stream_id)).hex()
+
+        # fill vc with values stored in redis
+        keys = credential['credentialSubject']['prescription'].keys()
+        for k in keys:
+            try:
+                 credential['credentialSubject']['prescription'][k] = data[k]
+            except:
+                 pass
+        
+        red.set(stream_id, json.dumps({'vc' : credential}))
+        
         credential_offer = {
             "type": "CredentialOffer",
             "credentialPreview": credential,
@@ -53,15 +66,8 @@ async def endpoint(stream_id, red):
         return jsonify(credential_offer)
 
     else :  #POST
-        credential = json.load(open('credentials/Prescription.jsonld', 'r'))
-        credential['issuer'] = did
-        # fill vc with values stored in redis
-        keys = credential['credentialSubject']['prescription'].keys()
-        for k in keys:
-            try:
-                 credential['credentialSubject']['prescription'][k] = data[k]
-            except:
-                 pass
+
+        credential = json.loads(red.get(stream_id).decode())['vc']
 
         # does not work => didkit.DIDKitException: Missing verification relationship
         didkit_options = {
@@ -106,4 +112,5 @@ def generate_credential(red):
 
         #Generate QR Code
         url = f'http://192.168.1.20:5000/endpoint/{stream_id}'
+        print(url)
         return render_template('qrcode.html', url=url)
