@@ -17,12 +17,12 @@ def init_app(app, red) :
 
 # API to interact with smartphone (wallet)
 async def endpoint(stream_id, red):
+
     try:
         print(f'Stream ID: {stream_id}')
         data = json.loads(red.get(stream_id).decode())
     except:
-        data =  {'name': 'mario', 'surname': 'rossi', 'drug': 'oki', 'dosage': '2'}
-        #return jsonify('Bad request: missing or invalid stream_id'), 400
+        return jsonify('Bad request: missing or invalid stream_id'), 400
 
     credential = json.load(open('credentials/Prescription.jsonld', 'r'))
     credential["issuer"] = did
@@ -48,11 +48,11 @@ async def endpoint(stream_id, red):
         credential = json.load(open('credentials/Prescription.jsonld', 'r'))
         credential['issuer'] = did
         # fill vc with values stored in redis
-        keys = credential['credentialSubject']['claim'].keys()
-        print(credential['credentialSubject']['claim'], data)
+        keys = credential['credentialSubject']['prescription'].keys()
+        print(credential['credentialSubject']['prescription'], data)
         for k in keys:
             try:
-                 credential['credentialSubject']['claim'][k] = data[k]
+                 credential['credentialSubject']['prescription'][k] = data[k]
             except:
                  pass
 
@@ -71,7 +71,7 @@ async def endpoint(stream_id, red):
 def generate_credential(red):
         
         #Generate stream id
-        stream_id = str(uuid.uuid1())
+        stream_id = str(uuid.uuid4().hex)
 
         form_keys = list(request.form.keys())
          
@@ -79,20 +79,21 @@ def generate_credential(red):
         vc_to_issue = request.form['vc']
         try:
             vc = json.load(open(f'credentials/{vc_to_issue}.jsonld', 'r'))
-            claim = vc['credentialSubject']['claim']
-            claim_keys = claim.keys()
+            prescription = vc['credentialSubject']['prescription']
+            prescription_keys = prescription.keys()
         except:
              return jsonify('Bad request'), 400
 
         #Get values from form
         data = {}
         for k in form_keys:
-             if(k in claim_keys):
+             if(k in prescription_keys):
                   data[k] = request.form[k]
         
         #Save on Redis using stream_id as key
         red.set(stream_id, json.dumps(data))
 
         #Generate QR Code
-        url = f'http:192.168.1.20:5000/endpoint/{stream_id}'
+        url = f'http://192.168.1.20:5000/endpoint/{stream_id}'
+        print(url)
         return render_template('qrcode.html', url=url)
