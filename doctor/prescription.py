@@ -3,10 +3,12 @@ from datetime import timedelta, datetime
 import json
 import uuid
 import didkit
+import web3
 
 #Keypair generated with DIDkit
 jwk = json.dumps(json.load(open("key.pem", "r")))
 did = 'did:key:z6MkeWr8PVVshiC14dGLUQNrE1Y2AcvfemHHQ1xKivsVB6JX'
+doctor = 'Dr. Mario Rossi'
 
 REDIS_DATA_TIME_TO_LIVE = 1800
 
@@ -21,6 +23,8 @@ async def endpoint(stream_id, red):
     try:
         print(f'Stream ID: {stream_id}')
         data = json.loads(red.get(stream_id).decode())
+        drug = data['drug']
+        dosage = data['dosage']
     except:
         return jsonify('Bad request: missing or invalid stream_id'), 400
 
@@ -34,8 +38,12 @@ async def endpoint(stream_id, red):
         credential_manifest = json.load(open('credentials/prescription_credential_manifest.json', 'r'))
         credential_manifest['issuer']['id'] = did
         credential_manifest['output_descriptors'][0]['id'] = '1234'
+        # fill with doctor and prescription details
+        credential_manifest['output_descriptors'][0]['display']['subtitle']['fallback'] = f'A prescription for n.{dosage} of {drug}'
+        credential_manifest['output_descriptors'][0]['display']['properties'][0]['fallback'] = doctor
         credential['id'] = "did:example:1234"
-        credential['credentialSubject']['id'] = "did:example:1234"
+        # use keccak hash to optimize smart contract
+        credential['credentialSubject']['id'] = web3.keccak(text=stream_id)
         credential_offer = {
             "type": "CredentialOffer",
             "credentialPreview": credential,
@@ -49,7 +57,6 @@ async def endpoint(stream_id, red):
         credential['issuer'] = did
         # fill vc with values stored in redis
         keys = credential['credentialSubject']['prescription'].keys()
-        print(credential['credentialSubject']['prescription'], data)
         for k in keys:
             try:
                  credential['credentialSubject']['prescription'][k] = data[k]
@@ -63,9 +70,13 @@ async def endpoint(stream_id, red):
         }
 
         signed_credential =  await didkit.issue_credential(json.dumps(credential), json.dumps({}), jwk)
+        
         if not signed_credential :         # send event to client agent to go forward
             return jsonify('Server failed'), 500
         # Success : send event to client agent to go forward
+
+        #TODO: insert prescription on blockchain using smart contract
+
         return jsonify(signed_credential)
 
 def generate_credential(red):
@@ -95,5 +106,4 @@ def generate_credential(red):
 
         #Generate QR Code
         url = f'http://192.168.1.20:5000/endpoint/{stream_id}'
-        print(url)
         return render_template('qrcode.html', url=url)
