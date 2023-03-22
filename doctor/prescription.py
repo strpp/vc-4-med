@@ -11,18 +11,18 @@ did = 'did:key:z6MkeWr8PVVshiC14dGLUQNrE1Y2AcvfemHHQ1xKivsVB6JX'
 REDIS_DATA_TIME_TO_LIVE = 1800
 
 def init_app(app, red) :
-    app.add_url_rule('/endpoint',  view_func=endpoint, methods = ['GET', 'POST'], defaults={"red" : red})
+    app.add_url_rule('/endpoint/<stream_id>',  view_func=endpoint, methods = ['GET', 'POST'], defaults={"red" : red})
     app.add_url_rule('/generate-credential',  view_func=generate_credential, methods = ['POST'], defaults={"red" : red})
     return
 
 # API to interact with smartphone (wallet)
-async def endpoint(red):
+async def endpoint(stream_id, red):
     try:
-        stream_id = request.args.get('stream_id')
         print(f'Stream ID: {stream_id}')
-        data = red.get(stream_id)
+        data = json.loads(red.get(stream_id).decode())
     except:
-        return jsonify('Bad request: missing or invalid stream_id'), 400
+        data =  {'name': 'mario', 'surname': 'rossi', 'drug': 'oki', 'dosage': '2'}
+        #return jsonify('Bad request: missing or invalid stream_id'), 400
 
     credential = json.load(open('credentials/Prescription.jsonld', 'r'))
     credential["issuer"] = did
@@ -42,28 +42,19 @@ async def endpoint(red):
             "expires" : '2024-02-20T18:15:39Z',
             "credential_manifest" : credential_manifest
         }
-        print(jsonify(credential_offer))
         return jsonify(credential_offer)
 
     else :  #POST
-        credential = {
-            "@context": ["https://www.w3.org/2018/credentials/v1", "https://schema.org/"],
-            "id": "https://example.com/credentials/123",
-            "type": ["VerifiableCredential", "MedicalPrescriptionCredential"],
-            "issuer": did,
-            "issuanceDate": datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
-            "expirationDate": "2024-02-23T00:00:00Z",
-            "credentialSubject": {
-                "id": "did:example:123",
-                "claim": {
-                    "@type": "MedicalPrescription",
-                    "name": data['name'],
-                    "surname": data['surname'],
-                    "drug": data['drug'],
-                    "dosage": data['dosage']
-                }
-            }
-        }
+        credential = json.load(open('credentials/Prescription.jsonld', 'r'))
+        credential['issuer'] = did
+        # fill vc with values stored in redis
+        keys = credential['credentialSubject']['claim'].keys()
+        print(credential['credentialSubject']['claim'], data)
+        for k in keys:
+            try:
+                 credential['credentialSubject']['claim'][k] = data[k]
+            except:
+                 pass
 
         # does not work => didkit.DIDKitException: Missing verification relationship
         didkit_options = {
@@ -80,7 +71,7 @@ async def endpoint(red):
 def generate_credential(red):
         
         #Generate stream id
-        stream_id = str(uuid.uuid4())
+        stream_id = str(uuid.uuid1())
 
         form_keys = list(request.form.keys())
          
@@ -103,5 +94,5 @@ def generate_credential(red):
         red.set(stream_id, json.dumps(data))
 
         #Generate QR Code
-        url = f'http:192.168.1.20:5000/endpoint?stream_id={stream_id}'
+        url = f'http:192.168.1.20:5000/endpoint/{stream_id}'
         return render_template('qrcode.html', url=url)
