@@ -7,5 +7,21 @@
   <h1>Verify a medical prescription</h1>
   <p> Use your wallet to scan the QRCODE</p>
   <img src="{{ qrcode(url) }}">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
+  
+  <script type="text/javascript" charset="utf-8">
+      var socket = io();
+
+      socket.on('connect', () => {
+        socket.emit('subscribe', {'socket_id': socket.id});
+      });
+
+      socket.on('stream_id', (resp) => {
+        console.log(`You should be redirected at: http://192.168.1.20:5001/callback/${resp['stream_id']}`);
+        window.location.replace(`http://192.168.1.20:5001/callback/${resp['stream_id']}`);
+      });
+  </script>
+  
 </body>
 </html>
