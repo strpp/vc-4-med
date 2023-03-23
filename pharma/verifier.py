@@ -1,9 +1,9 @@
 from flask import jsonify, request, render_template, session, redirect, flash, Response
 from flask_socketio import SocketIO, join_room, leave_room
 from datetime import timedelta, datetime
+from didkit import verify_presentation
 import json
 import uuid
-import didkit
 from web3 import Web3
 
 def init_app(app, red, socketio) : 
@@ -32,20 +32,63 @@ def authorize(red, socketio):
     print(url)
     return render_template('qrcode.html', url=url)
 
-def verify(stream_id, red, socketio):
+async def verify(stream_id, red, socketio):
 
     if request.method == 'GET':
-        socket_id = json.loads(red.get(stream_id).decode())['socket_id']
-        print(f'{stream_id} requested auth for {socket_id}')
-        socketio.emit('stream_id', {'stream_id' : stream_id}, to=socket_id)
-        return jsonify({'stream_id' : stream_id})
+        presentation_request = {
+            "type": "VerifiablePresentationRequest",
+            "query": [
+                    {
+                    "type": "QueryByExample",
+                    "credentialQuery": [
+                        {
+                        "required": True,
+                        "example": {
+                            "type": "MedicalPrescriptionCredential",
+                            "trustedIssuer": [
+                                {
+                                    "required": True,
+                                    "issuer": "did:key:z6MkeWr8PVVshiC14dGLUQNrE1Y2AcvfemHHQ1xKivsVB6JX"
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                ],
+            "challenge": str(uuid.uuid4),
+            "domain": "www.example.com"
+        }
+        return jsonify(presentation_request)
     
-    else:
-        #TODO
-        return 200
+    else: #POST
+        form = request.form
+        presentation = json.loads(form.get('presentation'))
+        verification_method = presentation['proof']['verificationMethod']
+        
+        try:
+            didkit_options = {"proofPurpose": "assertionMethod","verificationMethod": verification_method}
+            await verify_presentation(json.dumps(presentation), json.dumps(didkit_options))
+
+            # Redirect client via server push
+            socket_id = json.loads(red.get(stream_id).decode())['socket_id']
+            socketio.emit('stream_id', {'stream_id' : stream_id}, to=socket_id)
+
+            # Save the tokens in the session
+            red.set(stream_id, json.dumps({'stream_id' : stream_id, 'socket_id' : socket_id, 'verified' : True, 'vp' : presentation}))
+            #session['id_token'] = create_id_token()
+            #session['access_token'] = create_access_token()
+
+            # Send ok to wallet
+            return 'Credential verified successfully!', 200
+        
+        except Exception as e:
+            print(e)
+            return 'Credential verification failed.', 400
+
 
 def callback(stream_id, red):
-    #TODO
-    return jsonify({'callback': 'success', 'stream_id' : stream_id})
+    vp = json.loads(red.get(stream_id).decode())['vp']
+    return jsonify({'callback': 'success', 'vp' : vp})
 
 
