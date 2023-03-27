@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pharma</title>
+</head>
+<body>
+    <h1>Your prescription</h1>
+    <ul id="prescription">
+        <li id="drug"></li>
+        <li id="dosage"></li>
+    </ul>
+
+    <h2>Create a new order</h2>
+    <p id="dosage_to_order"></p>
+
+    <form action="/order/{{stream_id}}" method="post">
+        <input type="hidden" name="quantity" id="quantity" value="1">
+        <input id="quantity" type="number" max="{{dosage}}" placeholder="{{dosage}}"/>
+        <input type="submit" value="Submit">
+    </form> 
+
+
+   <script>
+        document.getElementById('drug').appendChild(document.createTextNode("Drug: {{drug}}"))
+        document.getElementById('dosage').appendChild(document.createTextNode("Dosage: {{dosage}}"))
+        document.getElementById('dosage_to_order').appendChild(document.createTextNode("Drug: {{drug}} Max quantity: {{dosage}}"))
+
+   </script>
+</body>
+</html>
