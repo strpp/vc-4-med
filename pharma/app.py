@@ -2,6 +2,7 @@ from flask import Flask, render_template
 from flask_session import Session
 from flask_socketio import SocketIO
 from flask_qrcode import QRcode
+from flask_cors import CORS
 from dotenv import load_dotenv
 import couchdb
 import redis
@@ -21,6 +22,7 @@ verifier.init_app(app, red, socketio, couch)
 
 Session(app)
 QRcode(app)
+CORS(app)
 
 
 @app.route('/')

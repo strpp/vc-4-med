@@ -19,6 +19,9 @@ def init_app(app, red, socketio, couch) :
     app.add_url_rule('/success/<tx>',  view_func=success, methods = ['GET','POST'], defaults={"red" : red})
     app.add_url_rule('/order/<stream_id>',  view_func=order, methods = ['POST'], defaults={"red" : red, "socketio" : socketio})
     app.add_url_rule('/contract/<stream_id>',  view_func=contract, methods = ['GET', 'POST'], defaults={"red" : red, "db": db, "socketio" : socketio})
+    app.add_url_rule('/api/credentials',  view_func=get_credentials, methods = ['GET', 'POST'], defaults={"red" : red, "db": db})
+    app.add_url_rule('/insurance',  view_func=insurance, methods = ['GET'])
+
     return
 
 def authorize(red, socketio):
@@ -157,6 +160,37 @@ async def contract(stream_id, red, db, socketio):
 
 def success(tx, red):
     return f'Payment successfully executed with TxHash:{tx}'
+
+async def get_credentials(red, db):
+    issuanceDate = "2024-03-27T20:52:06Z" #TODO
+
+    # Mango query
+    query = {
+        "selector": {
+            "issuanceDate": {"$lte": issuanceDate}
+        }
+    }
+
+    # Run query
+    result_set = []
+    for vc in db.find(query):
+        #Delete CouchDB keys
+        vc.pop('_id', None)
+        vc.pop('_rev', None)
+
+        #Generate VPs 
+        vp = {
+                "@context": ["https://www.w3.org/2018/credentials/v1","https://www.w3.org/2018/credentials/examples/v1"],
+                "type": ["VerifiablePresentation"],
+                "verifiableCredential": [vc],
+            }
+        vp = await didkit.issue_presentation(json.dumps(vp), json.dumps({}), jwk)
+        result_set.append(vp)
+    
+    return result_set
+
+def insurance():
+    return render_template('insurance.html')
 
 
 
