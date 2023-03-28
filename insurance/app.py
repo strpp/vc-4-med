@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify
 from flask_session import Session
 from flask_cors import CORS
 from dotenv import load_dotenv
+import didkit
+import json
 
 app = Flask(__name__)
 CORS(app)
@@ -14,18 +16,51 @@ def index():
     return "Insurance API"
 
 @app.route('/api/refund', methods=['POST'])
-def refund():
+async def refund():
     try:
         vps = request.json
     except:
         return 'Bad Request', 400
 
-    # Check VP
-    print(vps[0])
+    for vp in vps:
+        # Check Receipt presentation
+        try:
+            verification_method = json.loads(vp)['proof']['verificationMethod']
+            didkit_options = {"proofPurpose": "assertionMethod", "verificationMethod": verification_method}
+            await didkit.verify_presentation(vp, json.dumps(didkit_options))
+        except:
+            print('Failed receipt check')
+            return 'Internal Server Error', 500
+        
+        # Check Prescription presentation
+        try:
+            prescription = json.loads(vp)['verifiableCredential'][0]['credentialSubject']['receipt']['vp']
+            verification_method = prescription['proof']['verificationMethod']
+            didkit_options = {"proofPurpose": "assertionMethod", "verificationMethod": verification_method}
+            await didkit.verify_presentation(json.dumps(prescription), json.dumps(didkit_options))
+        except:
+            print('Failed prescription presentation check')
+            return 'Internal Server Error', 500
+        
+        # Check Prescription credential
+        try:
+            vc = json.loads(vp)['verifiableCredential'][0]['credentialSubject']['receipt']['vp']['verifiableCredential']
+            verification_method = vc['proof']['verificationMethod']
+            didkit_options = {"proofPurpose": "assertionMethod", "verificationMethod": verification_method}
+            await didkit.verify_credential(json.dumps(vc), json.dumps(didkit_options))
+        except:
+            print('Failed prescription credential check')
+            return 'Internal Server Error', 500
+        
+        # Check TXH on blockchain (TODO)
+        try:
+            tx = json.loads(vp)['verifiableCredential'][0]['credentialSubject']['receipt']['proofOfPayment']
+            print(tx)
+        except:
+            print('Failed proofOfPayment check')
+            return 'Internal Server Error', 500
 
-    # Check TXH on blockchain
-
-    # Initiate refund process
+        # Initiate refund process
 
     # Return results
     response = jsonify({'message': 'success'})

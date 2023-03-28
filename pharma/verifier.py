@@ -9,6 +9,7 @@ import contract_api
 from web3 import Web3
 
 DID_KEY = os.getenv('DID_KEY')
+VERIFICATION_METHOD = f'{DID_KEY}#{DID_KEY.split(":")[2]}'
 jwk = json.dumps(json.load(open("key.pem", "r")))
 
 def init_app(app, red, socketio, couch) : 
@@ -21,6 +22,7 @@ def init_app(app, red, socketio, couch) :
     app.add_url_rule('/contract/<stream_id>',  view_func=contract, methods = ['GET', 'POST'], defaults={"red" : red, "db": db, "socketio" : socketio})
     app.add_url_rule('/api/credentials',  view_func=get_credentials, methods = ['GET', 'POST'], defaults={"red" : red, "db": db})
     app.add_url_rule('/insurance',  view_func=insurance, methods = ['GET'])
+    app.add_url_rule('/info',  view_func=verifier_info, methods = ['GET'])
 
     return
 
@@ -184,13 +186,26 @@ async def get_credentials(red, db):
                 "type": ["VerifiablePresentation"],
                 "verifiableCredential": [vc],
             }
-        vp = await didkit.issue_presentation(json.dumps(vp), json.dumps({}), jwk)
+        try:
+            vp = await didkit.issue_presentation(
+                json.dumps(vp),
+                # TODO 
+                json.dumps({'verificationMethod': VERIFICATION_METHOD}), 
+                jwk
+            )
+        except:
+            return 'Internal server error', 500
+
         result_set.append(vp)
     
     return result_set
 
 def insurance():
     return render_template('insurance.html')
+
+def verifier_info():
+    info = {'DID_KEY' : DID_KEY, 'VERIFICATION_METHOD' : VERIFICATION_METHOD}
+    return jsonify(info)
 
 
 
