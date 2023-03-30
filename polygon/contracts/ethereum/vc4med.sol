@@ -9,6 +9,9 @@ contract vc4med {
   constructor(){
     // Set the transaction sender as the owner of the contract.
     owner = msg.sender;
+    // Values for demo
+    doctors['did:key:z6MkeWr8PVVshiC14dGLUQNrE1Y2AcvfemHHQ1xKivsVB6JX']= true;
+    pharmas['did:key:z6MktaAfLYZF3khaHZuWCho1vrJkDPXx1nkHtPSXFSwk6g5i']=true;
   }
 
   // Modifier to check that the caller is the owner of the contract.
