@@ -106,3 +106,9 @@ dist
 dump.rdb
 doctor/key.pem
 pharma/key.pem
+
+.env
+.env.test
+build
+node_modules
+
