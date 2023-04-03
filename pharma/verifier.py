@@ -9,7 +9,7 @@ import contract_api
 from web3 import Web3
 
 DID_KEY = os.getenv('DID_KEY')
-VERIFICATION_METHOD = f'{DID_KEY}#{DID_KEY.split(":")[2]}'
+VERIFICATION_METHOD = 'did:key:z6MktaAfLYZF3khaHZuWCho1vrJkDPXx1nkHtPSXFSwk6g5i#z6MktaAfLYZF3khaHZuWCho1vrJkDPXx1nkHtPSXFSwk6g5i'
 jwk = json.dumps(json.load(open("key.pem", "r")))
 
 def init_app(app, red, socketio, couch) : 
