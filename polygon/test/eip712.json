@@ -1,0 +1,29 @@
+{
+    "EIP712Domain": [
+      {
+        "name": "vc4med",
+        "type": "string"
+      },
+      {
+        "name": "1",
+        "type": "string"
+      },
+      {
+        "name": "verifyingContract",
+        "type": "address"
+      },
+      {
+        "name": "salt",
+        "type": "bytes32"
+      }
+    ],
+    "Order": [
+      { "name": "id", "type": "uint256" },
+      { "name": "prescription", "type": "Prescription[]" }
+    ],
+    "Prescription": [
+      { "name": "prescriptionId", "type": "bytes32" },
+      { "name": "quantity", "type": "uint256" },
+      { "name": "totalPrice", "type": "uint256" }
+    ]
+  }
