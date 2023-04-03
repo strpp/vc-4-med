@@ -1,6 +1,3 @@
-const Web3 = require('web3')
-const web3 = new Web3('http://localhost:8545')
-
 const signTypedDataV4Button = document.getElementById('signedTypedDataV4Button');
 
 signTypedDataV4Button.addEventListener('click', async function (event) {
@@ -55,13 +52,14 @@ signTypedDataV4Button.addEventListener('click', async function (event) {
         ],
       },
     });
-  
-    var from = await web3.eth.getAccounts();
+    
+    const { ethereum } = window;
+    var from = await ethereum.request({ method: 'eth_accounts' });
   
     var params = [from[0], msgParams];
     var method = 'eth_signTypedData_v4';
   
-    web3.currentProvider.sendAsync(
+    ethereum.sendAsync(
       {
         method,
         params,
