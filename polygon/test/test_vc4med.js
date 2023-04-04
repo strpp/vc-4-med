@@ -19,13 +19,11 @@ contract("Vc4Med", accounts => {
 
 it("Sign an order", async () => {
   const vc4medInstance = await vc4med.deployed();
+  const order = {"orderId":"1","totalPrice":1,"prescription":[{"prescriptionId":"1","quantity":1,"price":1}]}
+  const signedOrder = "0xee09d0a12972065e6afce54864ff48dc5d2f222f5e1168c1a603ae78c8e760b96d55fa29b94292aec5ff9a6ff1c69d4d3e3e8b904c6aa6498f8d562845bc656e1c"
   
-  //const signerIdentity = EthCrypto.createIdentity();
-  const message = {"domain":{"chainId":1337,"name":"vc4med","verifyingContract":"0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC","version":"1"},"message":{"contents":"Hello, Bob!","attachedMoneyInEth":4.2,"from":{"name":"Cow","wallets":["0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826","0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF"]},"to":[{"name":"Bob","wallets":["0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB","0xB0BdaBea57B0BDABeA57b0bdABEA57b0BDabEa57","0xB0B0b0b0b0b0B000000000000000000000000000"]}]},"primaryType":"Mail","types":{"EIP712Domain":[{"name":"name","type":"string"},{"name":"version","type":"string"},{"name":"chainId","type":"uint256"},{"name":"verifyingContract","type":"address"}],"Group":[{"name":"name","type":"string"},{"name":"members","type":"Person[]"}],"Mail":[{"name":"from","type":"Person"},{"name":"to","type":"Person[]"},{"name":"contents","type":"string"}],"Person":[{"name":"name","type":"string"},{"name":"wallets","type":"address[]"}]}}
-  const sig = await web3.eth.signedData(message, accounts[0])
-  //const pharma = await vc4medInstance.recoverSigner(message, sig);
-  //console.log(pharma)
-  //assert.equal(pharma, accounts[0], "Doctor has not been inserted correctly");
+  const result = await vc4medInstance.verifyOrder(order, signedOrder)
+  console.log(result)
   });
 
 });

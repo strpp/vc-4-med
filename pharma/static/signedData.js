@@ -25,13 +25,7 @@ signTypedDataV4Button.addEventListener('click', async function (event) {
       */
       orderId : '1',
       totalPrice: 1,
-      prescriptions : [
-        {
-          prescriptionId : '1',
-          quantity: 1,
-          price: 1
-        },
-      ]
+      prescription: [{prescriptionId:'1', quantity:1, price:1}]
     },
     // Refers to the keys of the *types* object below.
     primaryType: 'Order',
@@ -52,7 +46,7 @@ signTypedDataV4Button.addEventListener('click', async function (event) {
       Order: [
         { name: 'orderId', type: 'string' },
         { name: 'totalPrice', type: 'uint256' },
-        { name: 'prescriptions', type: 'Prescription []' },
+        { name: 'prescription', type: 'Prescription[]'}
       ],
       // Not an EIP712Domain definition
       Prescription: [
@@ -66,7 +60,6 @@ signTypedDataV4Button.addEventListener('click', async function (event) {
     const { ethereum } = window;
     var from = await ethereum.request({ method: 'eth_accounts' });
     const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-    console.log(accounts[0])
   
     var params = [accounts[0], msgParams];
     var method = 'eth_signTypedData_v4';
@@ -84,8 +77,6 @@ signTypedDataV4Button.addEventListener('click', async function (event) {
         }
         if (result.error) return console.error('ERROR', result);
         console.log('TYPED SIGNED:' + JSON.stringify(result.result));
-
-        console.log(msgParams)
       }
     );
   });
