@@ -29,11 +29,11 @@ contract vc4med {
   );
 
   bytes32 constant PRESCRIPTION_TYPEHASH = keccak256(
-   "Prescription(string prescriptionId,uint quantity,uint price)"
+   "Prescription(string prescriptionId,uint256 quantity,uint256 price)"
   );
 
   bytes32 constant ORDER_TYPEHASH = keccak256(
-    "Order(string orderId,uint totalPrice,Prescription [] prescriptions)Prescription(string prescriptionId,uint quantity,uint price)"
+    "Order(string orderId,uint256 totalPrice,Prescription[] prescriptions)Prescription(string prescriptionId,uint256 quantity,uint256 price)"
   );
 
   bytes32 DOMAIN_SEPARATOR;
@@ -58,6 +58,8 @@ contract vc4med {
     }));
   }
 
+  event Print(string toPrint);
+
   // Modifier to check that the caller is the owner of the contract.
   modifier onlyOwner() {
     require(msg.sender == owner, "Not owner");
@@ -81,7 +83,7 @@ contract vc4med {
     pharmas[didkey] = true;
   }
 
-  function hash(EIP712Domain memory eip712Domain) internal pure returns (bytes32) {
+  function hash(EIP712Domain memory eip712Domain) public pure returns (bytes32) {
     return keccak256(abi.encode(
       EIP712DOMAIN_TYPEHASH,
       keccak256(bytes(eip712Domain.name)),
@@ -91,7 +93,7 @@ contract vc4med {
       ));
   }
 
-  function hash(Order memory order) internal pure returns (bytes32) {
+  function hash(Order memory order) public pure returns (bytes32) {
     return keccak256(abi.encode(
       ORDER_TYPEHASH,
       keccak256(bytes(order.orderId)),
@@ -100,7 +102,7 @@ contract vc4med {
     ));
   }
 
-  function hash(Prescription memory p) internal pure returns (bytes32) {
+  function hash(Prescription memory p) public pure returns (bytes32) {
     return keccak256(abi.encode(
       PRESCRIPTION_TYPEHASH,
       keccak256(bytes(p.prescriptionId)),
@@ -109,15 +111,15 @@ contract vc4med {
     ));
   }
 
-  function hash(Prescription [] memory ps) internal pure returns(bytes32){
-    bytes32 [] memory keccakValues;
+  function hash(Prescription [] memory ps) public pure returns(bytes32){
+    bytes32 [] memory keccakValues = new bytes32[](ps.length);
     for(uint i =0; i<ps.length; i++){
       keccakValues[i] = hash(ps[i]);
     }
     return keccak256(abi.encode(keccakValues));
   }
 
-  function verifyOrder(Order memory order, bytes memory sig) internal view returns (address) {
+  function verifyOrder(Order memory order, bytes memory sig) public view returns (address) {
     bytes32 r; bytes32 s; uint8 v;
     assembly {
       r := mload(add(sig, 32))
@@ -129,6 +131,25 @@ contract vc4med {
     bytes32 digest = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, hash(order)));
     return ecrecover(digest, v, r, s);
   }
+
+  function createOrder(string memory orderId, uint totalPrice, string[] memory ids, uint[] memory quantities, uint[] memory prices) 
+    public pure returns(Order memory){
+  
+    Prescription [] memory prs = new Prescription[](ids.length);
+    for(uint i=0; i<prs.length; i++){
+      prs[i] = Prescription(ids[i], quantities[i], prices[i]);
+    }
+    
+    return Order(orderId, totalPrice, prs);
+  }
+
+  function payOrder(string memory orderId, uint totalPrice, string[] memory ids, uint[] memory quantities, uint[] memory prices, bytes memory sig)
+    public view returns(address){
+    
+    Order memory o = createOrder(orderId, totalPrice, ids, quantities, prices);
+    return verifyOrder(o, sig);
+    }
+
 
 
 }
