@@ -19,7 +19,7 @@ contract vc4med {
   struct Order{
     string orderId;
     uint totalPrice;
-    Prescription [] prescriptions;
+    //Prescription [] prescriptions;
   }
 
   address public owner;
@@ -33,7 +33,8 @@ contract vc4med {
   );
 
   bytes32 constant ORDER_TYPEHASH = keccak256(
-    "Order(string orderId,uint256 totalPrice,Prescription[] prescriptions)Prescription(string prescriptionId,uint256 quantity,uint256 price)"
+    "Order(string orderId,uint256 totalPrice,Prescription[] prescriptions)"
+    //Prescription(string prescriptionId,uint256 quantity,uint256 price)"
   );
 
   bytes32 DOMAIN_SEPARATOR;
@@ -97,8 +98,8 @@ contract vc4med {
     return keccak256(abi.encode(
       ORDER_TYPEHASH,
       keccak256(bytes(order.orderId)),
-      order.totalPrice,
-      hash(order.prescriptions)
+      order.totalPrice
+      //hash(order.prescriptions)
     ));
   }
 
@@ -121,32 +122,43 @@ contract vc4med {
 
   function verifyOrder(Order memory order, bytes memory sig) public view returns (address) {
     bytes32 r; bytes32 s; uint8 v;
+    require(sig.length == 65, "invalid signature length");
+
     assembly {
+      /*
+      First 32 bytes stores the length of the signature
+      add(sig, 32) = pointer of sig + 32
+      effectively, skips first 32 bytes of signature
+      mload(p) loads next 32 bytes starting at the memory address p into memory
+      */
+      // first 32 bytes, after the length prefix
       r := mload(add(sig, 32))
+      // second 32 bytes
       s := mload(add(sig, 64))
-      v := and(mload(add(sig, 65)), 255)
+      // final byte (first byte of the next 32 bytes)
+      v := byte(0, mload(add(sig, 96)))
     }
-    if (v < 27) v += 27;
     
     bytes32 digest = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, hash(order)));
     return ecrecover(digest, v, r, s);
   }
 
-  function createOrder(string memory orderId, uint totalPrice, string[] memory ids, uint[] memory quantities, uint[] memory prices) 
+  function createOrder(string memory orderId, uint totalPrice/*, string[] memory ids, uint[] memory quantities, uint[] memory prices*/) 
     public pure returns(Order memory){
-  
+      /*
     Prescription [] memory prs = new Prescription[](ids.length);
     for(uint i=0; i<prs.length; i++){
       prs[i] = Prescription(ids[i], quantities[i], prices[i]);
     }
+    */
     
-    return Order(orderId, totalPrice, prs);
+    return Order(orderId, totalPrice/*, prs*/);
   }
 
-  function payOrder(string memory orderId, uint totalPrice, string[] memory ids, uint[] memory quantities, uint[] memory prices, bytes memory sig)
+  function payOrder(string memory orderId, uint totalPrice/*, string[] memory ids, uint[] memory quantities, uint[] memory prices*/, bytes memory sig)
     public view returns(address){
     
-    Order memory o = createOrder(orderId, totalPrice, ids, quantities, prices);
+    Order memory o = createOrder(orderId, totalPrice/*, ids, quantities, prices*/);
     return verifyOrder(o, sig);
     }
 
