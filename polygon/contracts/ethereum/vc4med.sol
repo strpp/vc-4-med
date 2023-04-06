@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 contract vc4med {
 
+  /* EIP 712 */
   struct EIP712Domain {
     string  name;
     string  version;
@@ -10,45 +11,50 @@ contract vc4med {
     address verifyingContract;
   }
 
-  struct Prescription{
-    string prescriptionId;
-    uint quantity;
-    uint price;
+  struct Prescription {
+    string prId;
+    uint256 quantity;
+    uint256 price;
   }
 
-  struct Order{
+  struct Order {
+    Prescription[] p;
     string orderId;
-    uint totalPrice;
-    //Prescription [] prescriptions;
+    uint256 totalPrice;
   }
-
-  address public owner;
 
   bytes32 constant EIP712DOMAIN_TYPEHASH = keccak256(
     "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
   );
 
   bytes32 constant PRESCRIPTION_TYPEHASH = keccak256(
-   "Prescription(string prescriptionId,uint256 quantity,uint256 price)"
+    "Prescription(string prId,uint256 quantity,uint256 price)"
   );
 
   bytes32 constant ORDER_TYPEHASH = keccak256(
-    "Order(string orderId,uint256 totalPrice,Prescription[] prescriptions)"
-    //Prescription(string prescriptionId,uint256 quantity,uint256 price)"
+    "Order(Prescription[] p,string orderId,uint256 totalPrice)Prescription(string prId,uint256 quantity,uint256 price)"
   );
 
   bytes32 DOMAIN_SEPARATOR;
 
-  mapping(bytes32 => uint) alreadyRedeemedQuantity;
-  mapping(string => bool) doctors;
-  mapping(string => bool) pharmas;
+  /* GLOBAL VARS */
+  mapping(string => uint) alreadyRedeemedQuantity;
+  mapping(string => bool) orders;
+  mapping(string => bool) doctorsKey;
+  mapping(string => bool) pharmasKey;
+  mapping(address=> bool) pharmasAddr;
+
+  address public owner;
 
   constructor(){
     // Set the transaction sender as the owner of the contract.
     owner = msg.sender;
+
     // Values for demo
-    doctors['did:key:z6MkeWr8PVVshiC14dGLUQNrE1Y2AcvfemHHQ1xKivsVB6JX']= true;
-    pharmas['did:key:z6MktaAfLYZF3khaHZuWCho1vrJkDPXx1nkHtPSXFSwk6g5i']=true;
+    doctorsKey['did:key:z6MkeWr8PVVshiC14dGLUQNrE1Y2AcvfemHHQ1xKivsVB6JX']= true;
+    pharmasKey['did:key:z6MktaAfLYZF3khaHZuWCho1vrJkDPXx1nkHtPSXFSwk6g5i']=true;
+    pharmasAddr[0x467FDaCfA2DC3bad646840F81f686579d6a7335F]=true;
+
     //EIP 712
     DOMAIN_SEPARATOR = hash(EIP712Domain({
       name: "vc4med",
@@ -59,8 +65,6 @@ contract vc4med {
     }));
   }
 
-  event Print(string toPrint);
-
   // Modifier to check that the caller is the owner of the contract.
   modifier onlyOwner() {
     require(msg.sender == owner, "Not owner");
@@ -68,99 +72,110 @@ contract vc4med {
     _;
   }
 
+  /* CRUD operations */
   function isDoctor(string memory didkey) public view returns (bool) {
-    return doctors[didkey];
+    return doctorsKey[didkey];
   }
 
   function isPharma(string memory didkey) public view returns (bool) {
-    return pharmas[didkey];
+    return pharmasKey[didkey];
+  }
+
+  function isPharma(address a) public view returns (bool) {
+    return pharmasAddr[a];
   }
 
   function addNewDoctor(string memory didkey) public onlyOwner(){
-    doctors[didkey] = true;
+    doctorsKey[didkey] = true;
   }
 
-  function addNewPharma(string memory didkey) public onlyOwner(){
-    pharmas[didkey] = true;
+  function addNewPharma(string memory didkey, address a) public onlyOwner(){
+    pharmasKey[didkey] = true;
+    pharmasAddr[a] = true;
   }
 
-  function hash(EIP712Domain memory eip712Domain) public pure returns (bytes32) {
+  /* Hash functions for EIP 712 */
+  function hash(EIP712Domain memory eip712Domain) internal pure returns (bytes32) {
     return keccak256(abi.encode(
       EIP712DOMAIN_TYPEHASH,
       keccak256(bytes(eip712Domain.name)),
       keccak256(bytes(eip712Domain.version)),
       eip712Domain.chainId,
       eip712Domain.verifyingContract
-      ));
-  }
-
-  function hash(Order memory order) public pure returns (bytes32) {
-    return keccak256(abi.encode(
-      ORDER_TYPEHASH,
-      keccak256(bytes(order.orderId)),
-      order.totalPrice
-      //hash(order.prescriptions)
     ));
   }
 
-  function hash(Prescription memory p) public pure returns (bytes32) {
+  function hash(Prescription memory prescription) internal pure returns (bytes32) {
     return keccak256(abi.encode(
       PRESCRIPTION_TYPEHASH,
-      keccak256(bytes(p.prescriptionId)),
-      p.quantity,
-      p.price
+      keccak256(bytes(prescription.prId)),
+      prescription.quantity,
+      prescription.price
     ));
   }
 
-  function hash(Prescription [] memory ps) public pure returns(bytes32){
-    bytes32 [] memory keccakValues = new bytes32[](ps.length);
-    for(uint i =0; i<ps.length; i++){
-      keccakValues[i] = hash(ps[i]);
-    }
-    return keccak256(abi.encode(keccakValues));
+  function hash(Prescription[] memory ps) internal pure returns (bytes32) {
+    bytes32[] memory keccakItems = new bytes32[](ps.length);
+      for(uint i=0; i<keccakItems.length;i++){
+        keccakItems[i] = hash(ps[i]);
+      }
+    return keccak256(abi.encodePacked(keccakItems));
   }
 
-  function verifyOrder(Order memory order, bytes memory sig) public view returns (address) {
-    bytes32 r; bytes32 s; uint8 v;
-    require(sig.length == 65, "invalid signature length");
+  function hash(Order memory order) internal pure returns (bytes32) {
+    return keccak256(abi.encode(
+      ORDER_TYPEHASH,
+      hash(order.p),
+      keccak256(bytes(order.orderId)),
+      order.totalPrice
+    ));
+  }
 
-    assembly {
-      /*
-      First 32 bytes stores the length of the signature
-      add(sig, 32) = pointer of sig + 32
-      effectively, skips first 32 bytes of signature
-      mload(p) loads next 32 bytes starting at the memory address p into memory
-      */
-      // first 32 bytes, after the length prefix
-      r := mload(add(sig, 32))
-      // second 32 bytes
-      s := mload(add(sig, 64))
-      // final byte (first byte of the next 32 bytes)
-      v := byte(0, mload(add(sig, 96)))
-    }
-    
-    bytes32 digest = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, hash(order)));
+  function verify(Order memory order, uint8 v, bytes32 r, bytes32 s) internal view returns (address) {
+    // Note: we need to use `encodePacked` here instead of `encode`.
+    bytes32 digest = keccak256(abi.encodePacked(
+      "\x19\x01",
+      DOMAIN_SEPARATOR,
+      hash(order)
+    ));
     return ecrecover(digest, v, r, s);
   }
-
-  function createOrder(string memory orderId, uint totalPrice/*, string[] memory ids, uint[] memory quantities, uint[] memory prices*/) 
-    public pure returns(Order memory){
-      /*
-    Prescription [] memory prs = new Prescription[](ids.length);
-    for(uint i=0; i<prs.length; i++){
-      prs[i] = Prescription(ids[i], quantities[i], prices[i]);
-    }
+    
+  // Order: JSON file with all the info to complete the payment
+  // Sig : hash signed by the pharmacy to check the order has not been tampered
+  function payOrder(Order memory order, bytes memory sig) public payable {
+   require(sig.length == 65, "invalid signature length");
+   uint8 v; bytes32 r; bytes32 s;
+   assembly {
+    /*
+    First 32 bytes stores the length of the signature
+    add(sig, 32) = pointer of sig + 32
+    effectively, skips first 32 bytes of signature
+    mload(p) loads next 32 bytes starting at the memory address p into memory
     */
-    
-    return Order(orderId, totalPrice/*, prs*/);
-  }
+    // first 32 bytes, after the length prefix
+    r := mload(add(sig, 32))
+    // second 32 bytes
+    s := mload(add(sig, 64))
+    // final byte (first byte of the next 32 bytes)
+    v := byte(0, mload(add(sig, 96)))
+    }     
+    address payable pharma = payable(verify(order, v, r, s));
+    require(isPharma(pharma), 'Signer is not a valid Pharmacy');
+    require(msg.value == order.totalPrice * 1e18, 'Amount of ETH is not enough to pay the order');
+    (bool sent, ) = pharma.call{value: msg.value}("");
+    require(sent, "Failed to pay");
 
-  function payOrder(string memory orderId, uint totalPrice/*, string[] memory ids, uint[] memory quantities, uint[] memory prices*/, bytes memory sig)
-    public view returns(address){
-    
-    Order memory o = createOrder(orderId, totalPrice/*, ids, quantities, prices*/);
-    return verifyOrder(o, sig);
+    orders[order.orderId] = true;
+
+    for(uint i=0; i<order.p.length; i++){
+      alreadyRedeemedQuantity[order.p[i].prId] += order.p[i].quantity;
     }
+
+
+
+
+  }
 
 
 
