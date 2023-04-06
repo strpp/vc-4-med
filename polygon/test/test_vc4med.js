@@ -30,16 +30,18 @@ contract("Vc4Med", accounts => {
     const hash = await vc4medInstance.createOrder(
       order.orderId,
       order.totalPrice,
+      /*
       ids,
       quantities,
       prices
+      */
     )
   });
 
   it("Verify an order", async () => {
     const vc4medInstance = await vc4med.deployed();
     const order = {orderId:"1",totalPrice:1,prescription:[{prescriptionId:"1",quantity:1,price:1}]}
-    const signedOrder = "0xee09d0a12972065e6afce54864ff48dc5d2f222f5e1168c1a603ae78c8e760b96d55fa29b94292aec5ff9a6ff1c69d4d3e3e8b904c6aa6498f8d562845bc656e1c"
+    const signedOrder = "0x14e8831a1ea9929b47c515c626e0e84c2f84af458187a6c5124820413a05daa24ddf514ed8cc1f69ecc77190effe6759dde336b1801de5200aea15666f37a7eb1b"
     
     let ids = []; let quantities = []; let prices = [];
     for(let i=0; i<order.prescription.length; i++){
@@ -50,9 +52,11 @@ contract("Vc4Med", accounts => {
     const hash = await vc4medInstance.payOrder(
       order.orderId,
       order.totalPrice,
+      /*
       ids,
       quantities,
       prices,
+      */
       signedOrder
     )
     const signer = '0xB2Bd4fF4068214274692595847BF562FFAb9b10e'
