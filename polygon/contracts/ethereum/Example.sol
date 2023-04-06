@@ -17,7 +17,7 @@ contract Example {
     }
 
     struct Order {
-        Prescription p;
+        Prescription[] p;
         string orderId;
         uint256 totalPrice;
     }
@@ -31,7 +31,7 @@ contract Example {
     );
 
     bytes32 constant ORDER_TYPEHASH = keccak256(
-        "Order(Prescription p,string orderId,uint256 totalPrice)Prescription(string name,uint256 quantity,uint256 price)"
+        "Order(Prescription[] p,string orderId,uint256 totalPrice)Prescription(string name,uint256 quantity,uint256 price)"
     );
 
     bytes32 DOMAIN_SEPARATOR;
@@ -65,6 +65,14 @@ contract Example {
         ));
     }
 
+    function hash(Prescription[] memory ps) internal pure returns (bytes32) {
+        bytes32[] memory keccakItems = new bytes32[](ps.length);
+        for(uint i=0; i<keccakItems.length;i++){
+            keccakItems[i] = hash(ps[i]);
+        }
+        return keccak256(abi.encodePacked(keccakItems));
+    }
+
     function hash(Order memory order) internal pure returns (bytes32) {
         return keccak256(abi.encode(
             ORDER_TYPEHASH,
@@ -84,7 +92,7 @@ contract Example {
         return ecrecover(digest, v, r, s);
     }
     
-    function test(bytes memory sig) public view returns (address) {
+    function test(Order memory order, bytes memory sig) public view returns (address) {
         require(sig.length == 65, "invalid signature length");
         uint8 v; bytes32 r; bytes32 s;
         assembly {
@@ -103,18 +111,7 @@ contract Example {
             s := mload(add(sig, 64))
             // final byte (first byte of the next 32 bytes)
             v := byte(0, mload(add(sig, 96)))
-        }
-        // Example signed message
-        Order memory order = Order({
-            p: Prescription({
-               name: "Cow",
-               quantity: 1,
-               price: 1
-            }),
-            orderId: "Hello, Bob!",
-            totalPrice: 1
-        });
-        
+        }        
         //assert(DOMAIN_SEPARATOR == 0xf2cee375fa42b42143804025fc449deafd50cc031ca257e0b194a650a912090f);
         //assert(hash(order) == 0xc52c0ee5d84264471806290a3f2c4cecfc5490626bf912d01f240d7a274b371e);
         return (verify(order, v, r, s));
