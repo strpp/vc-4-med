@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pharma</title>
+</head>
+<body>
+    <h1>Pay your order</h1>
+    <h2>Summary</h2>
+
+    <button id="payButton">click to pay</button>
+    <!--<script src="{{url_for('static', filename='payOrder.js')}}"></script>-->
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+    <script>
+        const payButton = document.getElementById('payButton');
+        payButton.addEventListener('click', async () => { pay() });
+        async function pay(){
+            const { ethereum } = window;
+            var from = await ethereum.request({ method: 'eth_requestAccounts' });
+            console.log(from[0])
+        }
+    </script>
+</body>
+</html>

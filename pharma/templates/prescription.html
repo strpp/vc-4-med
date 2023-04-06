@@ -13,17 +13,12 @@
     <h2>Create a new order</h2>
     <p id="dosage_to_order"></p>
 
-    <form action="/order/{{stream_id}}" method="post">
-        <input type="hidden" name="quantity" id="quantity" value="1">
-        <input id="quantity" type="number" max="{{dosage}}" placeholder="{{dosage}}"/>
-        <input type="submit" value="Submit">
-    </form> 
-
-    <div>
-        <h3>Sign Typed Data V4</h3>
-        <button type="button" id="sign">sign typed data v4</button>
-      </div>     
-
+    <form id="myForm">
+        <input type="hidden" id="stream_id" name="stream_id" value="{{stream_id}}"/>
+        <input type="number" id="quantity" name="quantity" value="1" min="1" max="{{dosage}}" required/>
+        <input type="submit" value="Create order" />
+    </form>
+      
    <script>
         document.getElementById('drug').appendChild(document.createTextNode("Drug: {{drug}}"))
         document.getElementById('dosage').appendChild(document.createTextNode("Dosage: {{dosage}}"))

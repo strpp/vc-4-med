@@ -1,7 +1,45 @@
-const signTypedDataV4Button = document.getElementById('sign');
+window.addEventListener("load", () => {
+  function sendData() {
+    const XHR = new XMLHttpRequest();
 
-signTypedDataV4Button.addEventListener('click', async function (event) {
-  event.preventDefault();
+    // Bind the FormData object and the form element
+    const FD = new FormData(form);
+
+    // Define what happens on successful data submission
+    XHR.addEventListener("load", async (event) => {
+      const order = JSON.parse(event.target.responseText)
+      const orderId = order['orderId']
+      await signOrder(order);
+    });
+
+    // Define what happens in case of error
+    XHR.addEventListener("error", (event) => {
+      alert('Oops! Something went wrong.');
+    });
+
+    // Set up our request
+    XHR.open("POST", `http://192.168.1.20:5001/order/${FD.get("stream_id")}`);
+
+    // The data sent is what the user provided in the form
+    XHR.send(FD);
+
+  }
+
+  // Get the form element
+  const form = document.getElementById("myForm");
+
+  // Add 'submit' event handler
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    sendData();
+  });
+});
+
+async function signOrder(order){
+
+  let signedOrder;
+  const orderId = order['orderId']
 
   const msgParams = JSON.stringify({
     domain: {
@@ -23,22 +61,9 @@ signTypedDataV4Button.addEventListener('click', async function (event) {
        - This is DApp Specific
        - Be as explicit as possible when building out the message schema.
       */
-      p : [{
-        prId: 'Cow',
-        quantity: 1,
-        maxQuantity: 2,
-        price: 1
-      },
-      {
-        prId: "Abc",
-        quantity: 2,
-        maxQuantity: 2,
-        price: 1
-     }
-    ],
-
-      orderId: "Hello, Bob!",
-      totalPrice: 1
+      p : order['p'],
+      orderId: order['orderId'],
+      totalPrice: order['totalPrice']
     
     },
     // Refers to the keys of the *types* object below.
@@ -85,8 +110,21 @@ signTypedDataV4Button.addEventListener('click', async function (event) {
         alert(result.error.message);
       }
       if (result.error) return console.error('ERROR', result);
-      console.log('TYPED SIGNED:' + JSON.stringify(result.result));
-      console.log(msgParams)
+      signedOrder = JSON.stringify(result.result)
+      console.log('TYPED SIGNED:' + signedOrder);
+
+      const sendSignedOrder = new XMLHttpRequest()
+
+      sendSignedOrder.open("POST", `http://192.168.1.20:5001/order/sign/${orderId}`);
+      sendSignedOrder.setRequestHeader("Content-Type", "application/json");
+      sendSignedOrder.send(JSON.stringify({"signedOrder" : signedOrder}));
+    
+      sendSignedOrder.addEventListener("load", async (event)=>{
+        if(event.target.status == 200) window.location.href = `http://192.168.1.20:5001/order/qr/${event.target.responseText}`;
+      });
     }
   );
-});
+
+
+  return signedOrder
+}
