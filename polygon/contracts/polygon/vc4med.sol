@@ -2,13 +2,69 @@
 pragma solidity 0.8.19;
 
 contract vc4med {
+
+  /* EIP 712 */
+  struct EIP712Domain {
+    string  name;
+    string  version;
+    uint256 chainId;
+    address verifyingContract;
+  }
+
+  struct Prescription {
+    string prId;
+    uint256 quantity;
+    uint256 price;
+  }
+
+  struct Order {
+    Prescription[] p;
+    string orderId;
+    uint256 totalPrice;
+  }
+
+  bytes32 constant EIP712DOMAIN_TYPEHASH = keccak256(
+    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+  );
+
+  bytes32 constant PRESCRIPTION_TYPEHASH = keccak256(
+    "Prescription(string prId,uint256 quantity,uint256 price)"
+  );
+
+  bytes32 constant ORDER_TYPEHASH = keccak256(
+    "Order(Prescription[] p,string orderId,uint256 totalPrice)Prescription(string prId,uint256 quantity,uint256 price)"
+  );
+
+  bytes32 DOMAIN_SEPARATOR;
+
+  /* GLOBAL VARS */
+  mapping(string => uint) alreadyRedeemedQuantity;
+  mapping(string => bool) orders;
+  mapping(string => bool) doctorsKey;
+  mapping(string => bool) pharmasKey;
+  mapping(address=> bool) pharmasAddr;
+
   address public owner;
-  mapping(string => bool) doctors;
-  mapping(string => bool) pharmas;
+
+  event orderHasBeenPayed(string orderId, uint256 value, address to);
 
   constructor(){
     // Set the transaction sender as the owner of the contract.
     owner = msg.sender;
+
+    // Values for demo
+    doctorsKey['did:key:z6MkeWr8PVVshiC14dGLUQNrE1Y2AcvfemHHQ1xKivsVB6JX']= true;
+    pharmasKey['did:key:z6MktaAfLYZF3khaHZuWCho1vrJkDPXx1nkHtPSXFSwk6g5i']=true;
+    pharmasAddr[0x467FDaCfA2DC3bad646840F81f686579d6a7335F]=true;
+
+    //EIP 712
+    DOMAIN_SEPARATOR = hash(EIP712Domain({
+      name: "vc4med",
+      version: '1',
+      chainId: 1337,
+      // verifyingContract: this
+      verifyingContract: 0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC
+    }));
   }
 
   // Modifier to check that the caller is the owner of the contract.
@@ -18,19 +74,110 @@ contract vc4med {
     _;
   }
 
+  /* CRUD operations */
   function isDoctor(string memory didkey) public view returns (bool) {
-    return doctors[didkey];
+    return doctorsKey[didkey];
   }
 
   function isPharma(string memory didkey) public view returns (bool) {
-    return pharmas[didkey];
+    return pharmasKey[didkey];
+  }
+
+  function isPharma(address a) public view returns (bool) {
+    return pharmasAddr[a];
   }
 
   function addNewDoctor(string memory didkey) public onlyOwner(){
-    doctors[didkey] = true;
+    doctorsKey[didkey] = true;
   }
 
-  function addNewPharma(string memory didkey) public onlyOwner(){
-    pharmas[didkey] = true;
+  function addNewPharma(string memory didkey, address a) public onlyOwner(){
+    pharmasKey[didkey] = true;
+    pharmasAddr[a] = true;
   }
+
+  /* Hash functions for EIP 712 */
+  function hash(EIP712Domain memory eip712Domain) internal pure returns (bytes32) {
+    return keccak256(abi.encode(
+      EIP712DOMAIN_TYPEHASH,
+      keccak256(bytes(eip712Domain.name)),
+      keccak256(bytes(eip712Domain.version)),
+      eip712Domain.chainId,
+      eip712Domain.verifyingContract
+    ));
+  }
+
+  function hash(Prescription memory prescription) internal pure returns (bytes32) {
+    return keccak256(abi.encode(
+      PRESCRIPTION_TYPEHASH,
+      keccak256(bytes(prescription.prId)),
+      prescription.quantity,
+      prescription.price
+    ));
+  }
+
+  function hash(Prescription[] memory ps) internal pure returns (bytes32) {
+    bytes32[] memory keccakItems = new bytes32[](ps.length);
+      for(uint i=0; i<keccakItems.length;i++){
+        keccakItems[i] = hash(ps[i]);
+      }
+    return keccak256(abi.encodePacked(keccakItems));
+  }
+
+  function hash(Order memory order) internal pure returns (bytes32) {
+    return keccak256(abi.encode(
+      ORDER_TYPEHASH,
+      hash(order.p),
+      keccak256(bytes(order.orderId)),
+      order.totalPrice
+    ));
+  }
+
+  function verify(Order memory order, uint8 v, bytes32 r, bytes32 s) internal view returns (address) {
+    // Note: we need to use `encodePacked` here instead of `encode`.
+    bytes32 digest = keccak256(abi.encodePacked(
+      "\x19\x01",
+      DOMAIN_SEPARATOR,
+      hash(order)
+    ));
+    return ecrecover(digest, v, r, s);
+  }
+    
+  // Order: JSON file with all the info to complete the payment
+  // Sig : hash signed by the pharmacy to check the order has not been tampered
+  function payOrder(Order memory order, bytes memory sig) public payable {
+   require(sig.length == 65, "invalid signature length");
+   uint8 v; bytes32 r; bytes32 s;
+   assembly {
+    /*
+    First 32 bytes stores the length of the signature
+    add(sig, 32) = pointer of sig + 32
+    effectively, skips first 32 bytes of signature
+    mload(p) loads next 32 bytes starting at the memory address p into memory
+    */
+    // first 32 bytes, after the length prefix
+    r := mload(add(sig, 32))
+    // second 32 bytes
+    s := mload(add(sig, 64))
+    // final byte (first byte of the next 32 bytes)
+    v := byte(0, mload(add(sig, 96)))
+    }     
+    address payable pharma = payable(verify(order, v, r, s));
+    require(isPharma(pharma), 'Signer is not a valid Pharmacy');
+    require(msg.value == order.totalPrice * 1e18, 'Amount of ETH is not enough to pay the order');
+    (bool sent, ) = pharma.call{value: msg.value}("");
+    require(sent, "Failed to pay");
+
+    orders[order.orderId] = true;
+
+    for(uint i=0; i<order.p.length; i++){
+      alreadyRedeemedQuantity[order.p[i].prId] += order.p[i].quantity;
+    }
+
+    emit orderHasBeenPayed(order.orderId, msg.value, pharma);
+
+  }
+
+
+
 }

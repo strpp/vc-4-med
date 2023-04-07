@@ -46,6 +46,8 @@ contract vc4med {
 
   address public owner;
 
+  event orderHasBeenPayed(string orderId, uint256 value, address to);
+
   constructor(){
     // Set the transaction sender as the owner of the contract.
     owner = msg.sender;
@@ -172,8 +174,7 @@ contract vc4med {
       alreadyRedeemedQuantity[order.p[i].prId] += order.p[i].quantity;
     }
 
-
-
+    emit orderHasBeenPayed(order.orderId, msg.value, pharma);
 
   }
 
