@@ -148,7 +148,7 @@ def create_qr_order(code):
 
 def pay_order(code, red):
     order = json.loads(red.get(code).decode())
-    return render_template('pay.html', order=order)
+    return render_template('pay.html',order=json.dumps(order))
     
 
 

@@ -14,9 +14,200 @@
         const payButton = document.getElementById('payButton');
         payButton.addEventListener('click', async () => { pay() });
         async function pay(){
+            // ask for order and signed order
+            const order = JSON.parse("{{order}}".replace(/&#34;/g,'"').replace('""','"').replace('""','"'))
+        
+            // Load web 3 instance and contract
+            const web3 = new Web3(Web3.givenProvider || "ws://localhost:8545");
             const { ethereum } = window;
-            var from = await ethereum.request({ method: 'eth_requestAccounts' });
-            console.log(from[0])
+            var account = await ethereum.request({ method: 'eth_requestAccounts' });
+            const ABI_CONTRACT =  [
+    {
+      "inputs": [],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "didkey",
+          "type": "string"
+        }
+      ],
+      "name": "isDoctor",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "didkey",
+          "type": "string"
+        }
+      ],
+      "name": "isPharma",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "a",
+          "type": "address"
+        }
+      ],
+      "name": "isPharma",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "didkey",
+          "type": "string"
+        }
+      ],
+      "name": "addNewDoctor",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "didkey",
+          "type": "string"
+        },
+        {
+          "internalType": "address",
+          "name": "a",
+          "type": "address"
+        }
+      ],
+      "name": "addNewPharma",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "components": [
+                {
+                  "internalType": "string",
+                  "name": "prId",
+                  "type": "string"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "quantity",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "maxQuantity",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "price",
+                  "type": "uint256"
+                }
+              ],
+              "internalType": "struct vc4med.Prescription[]",
+              "name": "p",
+              "type": "tuple[]"
+            },
+            {
+              "internalType": "string",
+              "name": "orderId",
+              "type": "string"
+            },
+            {
+              "internalType": "uint256",
+              "name": "totalPrice",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct vc4med.Order",
+          "name": "order",
+          "type": "tuple"
+        },
+        {
+          "internalType": "bytes",
+          "name": "sig",
+          "type": "bytes"
+        }
+      ],
+      "name": "payOrder",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function",
+      "payable": true
+    }
+  ]
+            const vc4med = new web3.eth.Contract(ABI_CONTRACT, '0x03aAe1d513275342FE04a3d6A94D6226D4473911')
+
+            // pay
+            try{
+                const tx = await vc4med.methods.payOrder(
+                    order['order'], 
+                    order['signed_order'],
+                    )
+                    .send({from:account[0], value: order['order']['totalPrice']*1e18});
+                alert(`Payment successfully executed with TX /${tx.transactionHash}`)
+            }catch(e){
+                const errorJson = e.message.substring(e.message.indexOf('{'), e.message.lastIndexOf("'"))
+                const tx = JSON.parse(errorJson)['value']['data']['data']
+                const txNumber = Object.keys(tx)[0];
+                const error = tx[txNumber]['reason']
+                alert(`ERROR: ${error}`)
+            }
         }
     </script>
 </body>
