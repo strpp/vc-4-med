@@ -15,8 +15,10 @@
         payButton.addEventListener('click', async () => { pay() });
         async function pay(){
             // ask for order and signed order
-            const order = JSON.parse("{{order}}".replace(/&#34;/g,'"').replace('""','"').replace('""','"'))
-        
+            const order = JSON.parse("{{order}}".
+                            replace(/&#34;/g,'"')
+                            .replace('"{','{').replace('}"','}')
+                            .replace('""','"').replace('""','"'))
             // Load web 3 instance and contract
             const web3 = new Web3(Web3.givenProvider || "ws://localhost:8545");
             const { ethereum } = window;
@@ -191,7 +193,7 @@
       "payable": true
     }
   ]
-            const vc4med = new web3.eth.Contract(ABI_CONTRACT, '0x03aAe1d513275342FE04a3d6A94D6226D4473911')
+            const vc4med = new web3.eth.Contract(ABI_CONTRACT, '0x2e3D6752536566ED51c805A86070BA596052FCb6')
 
             // pay
             try{

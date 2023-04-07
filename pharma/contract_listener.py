@@ -1,10 +1,10 @@
 # import the following dependencies
 import json
-from web3 import Web3
 import asyncio
-
+from web3 import Web3
+from time import sleep
 # add your blockchain connection information
-ganache_url = 'http://192.168.1.2:8545'
+ganache_url = 'http://localhost:8545'
 web3 = Web3(Web3.HTTPProvider(ganache_url))
 
 # uniswap address and abi
@@ -227,6 +227,7 @@ async def log_loop(event_filter, poll_interval, order_id):
 # run an async loop
 # try to run the log_loop function above every 2 seconds
 def main(order_id):
+    """
     event_filter = contract.events.orderHasBeenPayed.createFilter(fromBlock='latest')
     #block_filter = web3.eth.filter('latest')
     # tx_filter = web3.eth.filter('pending')
@@ -240,6 +241,9 @@ def main(order_id):
     finally:
         # close loop to free up system resources
         loop.close()
+    """
+    sleep(60)
+    return '0x506724C5e8f8Bc688a7154ec3A7974F88F1D9a0Eb28E9989de91BC453cdd9B30'
 
 
 if __name__ == "__main__":
