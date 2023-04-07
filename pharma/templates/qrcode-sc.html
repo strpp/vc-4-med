@@ -12,17 +12,21 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
   
   <script type="text/javascript" charset="utf-8">
-      var socket = io();
-      
-      socket.on('connect', () => {
-        socket.emit('subscribe', {'socket_id': socket.id});
-      });
+    window.onload = function (){
+      const XHR = new XMLHttpRequest();
+        
+      // Define what happens on successful data submission
+      XHR.addEventListener("load", async (event) => {console.log(event.target.responseText)});
 
-      socket.on('txReceived', (resp) => {
-        console.log(`You should be redirected at: http://192.168.1.20:5001/success/${resp['tx']}`);
-        window.location.replace(`http://192.168.1.20:5001/success/${resp['tx']}`);
-      });
+      // Define what happens in case of error
+      XHR.addEventListener("error", (event) => {alert('Oops! Something went wrong.');});
 
+      // Set up our request
+      const code = "{{code}}"
+      const url = `http://192.168.1.20:5001/order/wait/${code}`
+      XHR.open("GET", url);
+      XHR.send()
+    }
   </script>
   
 </body>
