@@ -15,6 +15,7 @@ start Redis:  <br />
 <code>redis-server</code>  <br />
 start couchDB:  <br />
 <code>sudo -i -u couchdb /home/couchdb/bin/couchdb</code>  <br />
+<code>(redis-server > /dev/null 2>&1) & (sudo -i -u couchdb /home/couchdb/bin/couchdb > /dev/null 2>&1) & (cd vc-4-med/pharma; python app.py )</code>
 
 ### 2 - Launch servers
 Move into each dir (doctor, pharma, insurance) and start flask servers using the following command <br />
