@@ -45,7 +45,6 @@ def authorize(red, socketio):
 
     #Generate QR Code
     url = url_for('verify', stream_id=stream_id, _external = True)
-    print(url)
     return render_template('qrcode.html', url=url)
 
 async def verify(stream_id, red, socketio):
@@ -146,7 +145,6 @@ async def wait_order(code, red, db):
 
     try:
         signed_receipt =  await didkit.issue_credential(json.dumps(receipt), json.dumps({}), jwk)
-        print(signed_receipt)
     except:
         return 'Error while signing the order receipt', 500
 
