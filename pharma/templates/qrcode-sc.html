@@ -16,7 +16,9 @@
       const XHR = new XMLHttpRequest();
         
       // Define what happens on successful data submission
-      XHR.addEventListener("load", async (event) => {console.log(event.target.responseText)});
+      XHR.addEventListener("load", async (event) => {
+        if(event.target.status == 200) window.location.href = `http://192.168.1.20:5001/success/${event.target.responseText}`;
+      });
 
       // Define what happens in case of error
       XHR.addEventListener("error", (event) => {alert('Oops! Something went wrong.');});

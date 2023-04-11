@@ -22,7 +22,7 @@ def init_app(app, red, socketio, couch) :
     app.add_url_rule('/order/sign/<order_id>',  view_func=receive_sign, methods = ['POST'], defaults={"red" : red})
     app.add_url_rule('/order/qr/<code>',  view_func=create_qr_order, methods = ['GET'])
     app.add_url_rule('/order/pay/<code>',  view_func=pay_order, methods = ['GET','POST'], defaults={"red" : red})
-    app.add_url_rule('/order/wait/<code>',  view_func=wait_order, methods = ['GET'], defaults={"red" : red})
+    app.add_url_rule('/order/wait/<code>',  view_func=wait_order, methods = ['GET'], defaults={"red" : red, "db":db})
     app.add_url_rule('/api/credentials',  view_func=get_credentials, methods = ['GET', 'POST'], defaults={"red" : red, "db": db})
     app.add_url_rule('/insurance',  view_func=insurance, methods = ['GET'])
     app.add_url_rule('/info',  view_func=verifier_info, methods = ['GET'])
@@ -132,7 +132,7 @@ def order(stream_id, red, socketio):
         print(f'socket_id : {socket_id} listening for prescription_id : {prescription_id}')
         red.set(prescription_id, json.dumps({'prescription_id' : prescription_id, 'socket_id' : socket_id}))
 
-    red.set(order_id, json.dumps({'order' : json.dumps(order), 'stream_id' : stream_id, 'signed_order' : 'null'}))
+    red.set(order_id, json.dumps({'order' : order, 'stream_id' : stream_id, 'signed_order' : 'null'}))
     return order
 
 # Receive order signed by pharmacy, store it on Redis and redirect to QRCode to make user able to pay with SC
@@ -150,25 +150,20 @@ def create_qr_order(code):
     url=f'http://192.168.1.20:5001/order/pay/{code}'
     return render_template('qrcode-sc.html', url=url, code=code)
 
-async def wait_order(code, red):
+async def wait_order(code, red, db):
     rs = json.loads(red.get(code).decode())
-    order_id = json.loads(rs['order'])['orderId']
+    order_id = rs['order']['orderId']
     stream_id = rs['stream_id']
+
     # run blockchain listener
-    result = await contract_listener.main(order_id)
-    return jsonify({'orderId' : order_id, 'streamId' : stream_id})
+    try:
+        tx = contract_listener.main(order_id)
+    except:
+        return 500 #timeout
 
-def pay_order(code, red):
-    order = json.loads(red.get(code).decode())
-    return render_template('pay.html',order=json.dumps(order))
-
-#TODO: change this function to handle the payment success and store the receipt
-async def contract(stream_id, red, db, socketio):
-    tx='1234'
     # Get data from Redis (prescription_id, quantity, socket_id)
     vp = json.loads(red.get(stream_id).decode())['vp']
     prescription_id = vp['verifiableCredential']['credentialSubject']['id']
-    quantity = request.args.get('quantity')
     
     # Issue new credential (Prescription + Proof of payment)
     receipt = json.load(open('credentials/Receipt.jsonld', 'r'))
@@ -186,13 +181,12 @@ async def contract(stream_id, red, db, socketio):
         return 500
 
     # Save credential on couchDB
-    db.save(json.loads(signed_receipt))
+    db.save(json.loads(signed_receipt))    
+    return tx
 
-    # Push notification to pharmacy client listening
-    socket_id = json.loads(red.get(prescription_id).decode())['socket_id']
-    socketio.emit('txReceived', {'tx' : tx, "success" : True}, to=socket_id)
-    
-    return "Payment successfully executed"
+def pay_order(code, red):
+    order = json.loads(red.get(code).decode())
+    return render_template('pay.html',order=json.dumps(order))
 
 def success(tx, red):
     return f'Payment successfully executed with TxHash:{tx}'
