@@ -1,4 +1,4 @@
-from flask import jsonify, request, render_template, session, redirect, flash, Response
+from flask import jsonify, request, render_template, url_for
 from flask_socketio import SocketIO, join_room, leave_room
 from datetime import timedelta, datetime
 import didkit
@@ -44,37 +44,16 @@ def authorize(red, socketio):
         red.set(stream_id, json.dumps({'stream_id' : stream_id, 'socket_id' : socket_id, 'verified' : False}))
 
     #Generate QR Code
-    url = f'http://192.168.1.20:5001/verify/{stream_id}'
+    url = url_for('verify', stream_id=stream_id, _external = True)
     print(url)
     return render_template('qrcode.html', url=url)
 
 async def verify(stream_id, red, socketio):
 
     if request.method == 'GET':
-        presentation_request = {
-            "type": "VerifiablePresentationRequest",
-            "query": [
-                    {
-                    "type": "QueryByExample",
-                    "credentialQuery": [
-                        {
-                        "required": True,
-                        "example": {
-                            "type": "MedicalPrescriptionCredential",
-                            "trustedIssuer": [
-                                {
-                                    "required": True,
-                                    "issuer": "did:key:z6MkeWr8PVVshiC14dGLUQNrE1Y2AcvfemHHQ1xKivsVB6JX"
-                                        }
-                                    ]
-                                }
-                            }
-                        ]
-                    }
-                ],
-            "challenge": str(uuid.uuid4),
-            "domain": "www.example.com"
-        }
+        with open('static/presentation_request.json', 'r') as j:
+            presentation_request = json.loads(j.read())
+        presentation_request['challenge'] = str(uuid.uuid4())
         return jsonify(presentation_request)
     
     else: #POST
@@ -110,7 +89,7 @@ def order(stream_id, red, socketio):
     prescription_id = json.loads(red.get(stream_id).decode())['vp']['verifiableCredential']['credentialSubject']['id']
     
     # create JSON order to be signed
-    order_id = "abcd"
+    order_id = uuid.uuid4().hex
     order = {
         "p" : 
         [{
@@ -122,15 +101,6 @@ def order(stream_id, red, socketio):
         "orderId" : order_id,
         "totalPrice" : 1
     }
-
-    @socketio.on('subscribe')
-    def subscribe(data):
-        # Add client to private channel to get further updates
-        join_room(data['socket_id'])
-        # Save socket_id on server session to make /authorize able to link socket_id and stream_id
-        socket_id = data['socket_id']
-        print(f'socket_id : {socket_id} listening for prescription_id : {prescription_id}')
-        red.set(prescription_id, json.dumps({'prescription_id' : prescription_id, 'socket_id' : socket_id}))
 
     red.set(order_id, json.dumps({'order' : order, 'stream_id' : stream_id, 'signed_order' : 'null'}))
     return order
@@ -147,7 +117,7 @@ def receive_sign(order_id, red):
     return code, 200
 
 def create_qr_order(code):
-    url=f'http://192.168.1.20:5001/order/pay/{code}'
+    url = url_for('pay_order', code=code, _external = True)
     return render_template('qrcode-sc.html', url=url, code=code)
 
 async def wait_order(code, red, db):
@@ -156,10 +126,10 @@ async def wait_order(code, red, db):
     stream_id = rs['stream_id']
 
     # run blockchain listener
-    try:
-        tx = contract_listener.main(order_id)
-    except:
-        return 500 #timeout
+    # NOTE: commented til we deploy on mumbai tx = contract_listener.main(order_id)
+    tx = '0x1234abcd'
+    if not tx:
+        return 'Timeout while listening blockchain', 500
 
     # Get data from Redis (prescription_id, quantity, socket_id)
     vp = json.loads(red.get(stream_id).decode())['vp']
@@ -178,7 +148,7 @@ async def wait_order(code, red, db):
         signed_receipt =  await didkit.issue_credential(json.dumps(receipt), json.dumps({}), jwk)
         print(signed_receipt)
     except:
-        return 500
+        return 'Error while signing the order receipt', 500
 
     # Save credential on couchDB
     db.save(json.loads(signed_receipt))    

@@ -1,0 +1,14 @@
+{
+    "type": "VerifiablePresentationRequest",
+    "query": [{
+        "type": "QueryByExample",
+        "credentialQuery": [{
+            "example": {
+                "type": "MedicalPrescriptionCredential"
+                }
+            }
+        ]
+    }],
+    "challenge": "",
+    "domain": ""
+}
