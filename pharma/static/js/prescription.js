@@ -1,9 +1,45 @@
+var vcs = JSON.parse(vcs.replace(/&#39;/g,'"')).vcs
+
+//  Create form
+const form = document.createElement("form");
+form.setAttribute("id", "orderForm")
+
+for(let i=0; i<vcs.length;i++){
+  let drug = vcs[i].credentialSubject.prescription.drug
+  let dosage =  vcs[i].credentialSubject.prescription.dosage
+  let label = document.createElement("label");
+  label.setAttribute("for", drug);
+  label.innerHTML = `<strong>${drug}</strong> (Max quantity: ${dosage})`
+  let input = document.createElement("input")
+  input.setAttribute("type", "number")
+  input.setAttribute("min", "1")
+  input.setAttribute("value", "1")
+  input.setAttribute("max",dosage)
+  input.setAttribute("id", drug)
+  form.appendChild(label)
+  form.appendChild(document.createElement('br'))
+  form.appendChild(input)
+  form.appendChild(document.createElement('br'))
+  form.appendChild(document.createElement('br'))
+}
+
+const submit = document.createElement('input')
+submit.setAttribute('type', 'submit')
+submit.setAttribute('value', 'Create order')
+form.appendChild(submit)
+document.getElementById('order').appendChild(form)
+
 window.addEventListener("load", () => {
   function sendData() {
     const XHR = new XMLHttpRequest();
 
-    // Bind the FormData object and the form element
-    const FD = new FormData(form);
+    // Fill the FormData object
+    const form = document.getElementsByTagName('input')
+    var data = new FormData();
+    for (const f of form) {
+      data.append(f.id, f.value)
+    }
+    data.append("stream_id", streamId)
 
     // Define what happens on successful data submission
     XHR.addEventListener("load", async (event) => {
@@ -18,20 +54,16 @@ window.addEventListener("load", () => {
     });
 
     // Set up our request
-    XHR.open("POST", `http://192.168.1.20:5001/order/${FD.get("stream_id")}`);
+    XHR.open("POST", `http://192.168.1.20:5001/order/${data.get("stream_id")}`);
 
     // The data sent is what the user provided in the form
-    XHR.send(FD);
+    XHR.send(data);
 
   }
-
-  // Get the form element
-  const form = document.getElementById("myForm");
 
   // Add 'submit' event handler
   form.addEventListener("submit", (event) => {
     event.preventDefault();
-
     sendData();
   });
 });

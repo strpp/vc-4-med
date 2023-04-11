@@ -4,27 +4,10 @@
     <title>Pharma</title>
 </head>
 <body>
-    <h1>Your prescription</h1>
-    <ul id="prescription">
-        <li id="drug"></li>
-        <li id="dosage"></li>
-    </ul>
-
-    <h2>Create a new order</h2>
-    <p id="dosage_to_order"></p>
-
-    <form id="myForm">
-        <input type="hidden" id="stream_id" name="stream_id" value="{{stream_id}}"/>
-        <input type="number" id="quantity" name="quantity" value="1" min="1" max="{{dosage}}" required/>
-        <input type="submit" value="Create order" />
-    </form>
-      
-   <script>
-        document.getElementById('drug').appendChild(document.createTextNode("Drug: {{drug}}"))
-        document.getElementById('dosage').appendChild(document.createTextNode("Dosage: {{dosage}}"))
-        document.getElementById('dosage_to_order').appendChild(document.createTextNode("Drug: {{drug}} Max quantity: {{dosage}}"))
-   </script>
-
-    <script src="{{url_for('static', filename='js/signedData.js')}}"></script> 
+    <h1>Create a new order</h1>
+    <div id="order"></div>
+    
+    <script> window.vcs = "{{vcs}}" ; window.streamId = "{{stream_id}}"</script>
+    <script src="{{url_for('static', filename='js/prescription.js')}}"></script> 
 </body>
 </html>

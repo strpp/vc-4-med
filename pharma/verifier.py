@@ -5,6 +5,7 @@ import didkit
 import json
 import uuid
 import os
+import random
 import contract_listener as contract_listener
 from web3 import Web3
 
@@ -50,9 +51,13 @@ def authorize(red, socketio):
 
 async def verify(stream_id, red, socketio):
 
+    # TODO
+    number_prescription = 2
+
     if request.method == 'GET':
-        with open('static/presentation_request.json', 'r') as j:
-            presentation_request = json.loads(j.read())
+        presentation_request = json.load(open('credentials/vp_request.json', 'r'))
+        for i in range(1,number_prescription+1):
+            presentation_request['query'][0]['credentialQuery'].append({"example": {"type": "MedicalPrescriptionCredential"}})
         presentation_request['challenge'] = str(uuid.uuid4())
         return jsonify(presentation_request)
     
@@ -64,6 +69,15 @@ async def verify(stream_id, red, socketio):
         try:
             didkit_options = {"proofPurpose": "assertionMethod","verificationMethod": verification_method}
             await didkit.verify_presentation(json.dumps(presentation), json.dumps(didkit_options))
+
+            # Check VCs are unique
+            ids = []
+            for vc in presentation['verifiableCredential']:
+                if (vc['credentialSubject']['id']) not in ids:
+                    ids.append(vc['credentialSubject']['id'])
+                else:
+                    #TODO emit error with socketio
+                    return 'Error: VCs are not unique', 500
 
             # Redirect client via server push
             socket_id = json.loads(red.get(stream_id).decode())['socket_id']
@@ -81,25 +95,36 @@ async def verify(stream_id, red, socketio):
 
 
 def callback(stream_id, red):
-    credentialSubject = json.loads(red.get(stream_id).decode())['vp']['verifiableCredential']['credentialSubject']
-    prescription = credentialSubject['prescription']
-    return render_template('prescription.html', drug=prescription['drug'], dosage=prescription['dosage'], stream_id=stream_id)
+    vcs = json.loads(red.get(stream_id).decode())['vp']['verifiableCredential']
+    return render_template('prescription.html', vcs={'vcs': vcs}, stream_id=stream_id)
 
+# Handle request for creating a new order from pharmacy
 def order(stream_id, red, socketio):
-    prescription_id = json.loads(red.get(stream_id).decode())['vp']['verifiableCredential']['credentialSubject']['id']
+    print(request.form)
+
+    prescriptions = json.loads(red.get(stream_id).decode())['vp']['verifiableCredential']
+
+    prs = []
+    total_price = 0
+
+    # get prescriptions
+    for p in prescriptions:
+        price = random.randint(1, 50) # TODO: just a mockup
+        prescription = {
+            "prId" : p['credentialSubject']['id'],
+            "quantity" : request.form.get(p['credentialSubject']['prescription']['drug']),
+            "maxQuantity" : p['credentialSubject']['prescription']['dosage'],
+            "price" : price
+        }
+        prs.append(prescription)
+        total_price+=price
     
     # create JSON order to be signed
     order_id = uuid.uuid4().hex
     order = {
-        "p" : 
-        [{
-            "prId" : prescription_id, 
-            "quantity" : request.form.get('quantity'),
-            "maxQuantity" : json.loads(red.get(stream_id).decode())['vp']['verifiableCredential']['credentialSubject']['prescription']['dosage'],
-            "price" : 1
-        }],
+        "p" : prs,
         "orderId" : order_id,
-        "totalPrice" : 1
+        "totalPrice" : total_price
     }
 
     red.set(order_id, json.dumps({'order' : order, 'stream_id' : stream_id, 'signed_order' : 'null'}))
@@ -133,20 +158,19 @@ async def wait_order(code, red, db):
 
     # Get data from Redis (prescription_id, quantity, socket_id)
     vp = json.loads(red.get(stream_id).decode())['vp']
-    prescription_id = vp['verifiableCredential']['credentialSubject']['id']
+    #prescription_id = vp['verifiableCredential']['credentialSubject']['id']
     
     # Issue new credential (Prescription + Proof of payment)
     receipt = json.load(open('credentials/Receipt.jsonld', 'r'))
     receipt["issuer"] = DID_KEY
     receipt['issuanceDate'] = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
     receipt['expirationDate'] =  (datetime.now() + timedelta(days= 365)).isoformat() + "Z"
-    receipt['id'] = f'did:example:{prescription_id}'
+    receipt['id'] = f'did:example:{order_id}'
     receipt['credentialSubject']['receipt']['vp'] = vp
     receipt['credentialSubject']['receipt']['proofOfPayment'] = tx
 
     try:
         signed_receipt =  await didkit.issue_credential(json.dumps(receipt), json.dumps({}), jwk)
-        print(signed_receipt)
     except:
         return 'Error while signing the order receipt', 500
 

@@ -1,4 +1,4 @@
-from flask import jsonify, request, render_template, session, redirect, flash, Response
+from flask import jsonify, request, render_template, url_for
 from datetime import timedelta, datetime
 import json
 import uuid
@@ -45,7 +45,7 @@ async def endpoint(stream_id, red):
         credential['expirationDate'] =  (datetime.now() + timedelta(days= 365)).isoformat() + "Z"
         credential['id'] = f'did:example:{stream_id}'
         # use keccak hash to optimize smart contract
-        credential['credentialSubject']['id'] = (Web3.keccak(text=stream_id)).hex()
+        credential['credentialSubject']['id'] = f'did:example:{uuid.uuid4().hex}'
 
         # fill vc with values stored in redis
         keys = credential['credentialSubject']['prescription'].keys()
@@ -60,7 +60,7 @@ async def endpoint(stream_id, red):
         credential_offer = {
             "type": "CredentialOffer",
             "credentialPreview": credential,
-            "expires" : '2024-02-20T18:15:39Z',
+            "expires" : (datetime.now() + timedelta(days= 365)).isoformat() + "Z",
             "credential_manifest" : credential_manifest
         }
         return jsonify(credential_offer)
@@ -79,10 +79,8 @@ async def endpoint(stream_id, red):
         
         if not signed_credential :         # send event to client agent to go forward
             return jsonify('Server failed'), 500
+        
         # Success : send event to client agent to go forward
-
-        #TODO: insert prescription on blockchain using smart contract
-
         return jsonify(signed_credential)
 
 def generate_credential(red):
@@ -111,6 +109,5 @@ def generate_credential(red):
         red.set(stream_id, json.dumps(data))
 
         #Generate QR Code
-        url = f'http://192.168.1.20:5000/endpoint/{stream_id}'
-        print(url)
+        url = url_for('endpoint', stream_id=stream_id, _external=True)
         return render_template('qrcode.html', url=url)

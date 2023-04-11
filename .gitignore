@@ -111,4 +111,4 @@ pharma/key.pem
 .env.test
 build
 node_modules
-
+examples
