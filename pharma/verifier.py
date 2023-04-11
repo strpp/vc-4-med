@@ -46,7 +46,6 @@ def authorize(red, socketio):
 
     #Generate QR Code
     url = url_for('verify', stream_id=stream_id, _external = True)
-    print(url)
     return render_template('qrcode.html', url=url)
 
 async def verify(stream_id, red, socketio):
