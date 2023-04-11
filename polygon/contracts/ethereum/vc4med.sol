@@ -55,7 +55,7 @@ contract vc4med {
     // Values for demo
     doctorsKey['did:key:z6MkeWr8PVVshiC14dGLUQNrE1Y2AcvfemHHQ1xKivsVB6JX']= true;
     pharmasKey['did:key:z6MktaAfLYZF3khaHZuWCho1vrJkDPXx1nkHtPSXFSwk6g5i']=true;
-    pharmasAddr[0x467FDaCfA2DC3bad646840F81f686579d6a7335F]=true;
+    pharmasAddr[0x2e3D6752536566ED51c805A86070BA596052FCb6]=true;
 
     //EIP 712
     DOMAIN_SEPARATOR = hash(EIP712Domain({
