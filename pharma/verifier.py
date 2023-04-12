@@ -15,8 +15,8 @@ jwk = json.dumps(json.load(open("key.pem", "r")))
 
 def init_app(app, red, socketio, couch) : 
     db = couch['vc']
-    app.add_url_rule('/authorize',  view_func=authorize, methods = ['GET', 'POST'], defaults={"red" : red, "socketio" : socketio})
-    app.add_url_rule('/verify/<stream_id>',  view_func=verify, methods = ['GET','POST'], defaults={"red" : red, "socketio" : socketio})
+    app.add_url_rule('/authorize',  view_func=authorize, methods = ['POST'], defaults={"red" : red, "socketio" : socketio})
+    app.add_url_rule('/verify/<stream_id>/<number_of_prescriptions>',  view_func=verify, methods = ['GET','POST'], defaults={"red" : red, "socketio" : socketio})
     app.add_url_rule('/callback/<stream_id>',  view_func=callback, methods = ['GET','POST'], defaults={"red" : red})
     app.add_url_rule('/success/<tx>',  view_func=success, methods = ['GET','POST'], defaults={"red" : red})
     app.add_url_rule('/order/<stream_id>',  view_func=order, methods = ['POST'], defaults={"red" : red, "socketio" : socketio})
@@ -45,17 +45,14 @@ def authorize(red, socketio):
         red.set(stream_id, json.dumps({'stream_id' : stream_id, 'socket_id' : socket_id, 'verified' : False}))
 
     #Generate QR Code
-    url = url_for('verify', stream_id=stream_id, _external = True)
+    url = url_for('verify', stream_id=stream_id, number_of_prescriptions=request.form['pnumber'], _external = True)
     return render_template('qrcode.html', url=url)
 
-async def verify(stream_id, red, socketio):
-
-    # TODO
-    number_prescription = 2
+async def verify(stream_id, number_of_prescriptions, red, socketio):
 
     if request.method == 'GET':
         presentation_request = json.load(open('credentials/vp_request.json', 'r'))
-        for i in range(1,number_prescription+1):
+        for i in range(1, int(number_of_prescriptions)+1):
             presentation_request['query'][0]['credentialQuery'].append({"example": {"type": "MedicalPrescriptionCredential"}})
         presentation_request['challenge'] = str(uuid.uuid4())
         return jsonify(presentation_request)

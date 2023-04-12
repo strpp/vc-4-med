@@ -43,14 +43,16 @@ async def refund():
             return 'Internal Server Error', 500
         
         # Check Prescription credential
-        try:
-            vc = json.loads(vp)['verifiableCredential'][0]['credentialSubject']['receipt']['vp']['verifiableCredential']
-            verification_method = vc['proof']['verificationMethod']
-            didkit_options = {"proofPurpose": "assertionMethod", "verificationMethod": verification_method}
-            await didkit.verify_credential(json.dumps(vc), json.dumps(didkit_options))
-        except:
-            print('Failed prescription credential check')
-            return 'Internal Server Error', 500
+        vc_list = json.loads(vp)['verifiableCredential'][0]['credentialSubject']['receipt']['vp']['verifiableCredential']
+        for vc in vc_list:
+            try:
+                verification_method = vc['proof']['verificationMethod']
+                didkit_options = {"proofPurpose": "assertionMethod", "verificationMethod": verification_method}
+                await didkit.verify_credential(json.dumps(vc), json.dumps(didkit_options))
+                print(f'{vc["credentialSubject"]["id"]} is ok')
+            except:
+                print('Failed prescription credential check')
+                return 'Internal Server Error', 500
         
         # Check TXH on blockchain (TODO)
         try:

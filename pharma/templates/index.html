@@ -4,8 +4,12 @@
     <title>Pharma</title>
 </head>
 <body>
-    <h1>Verify a prescription</h1>
-   <a href="/authorize"><button>Verify</button></a>
+    <h1>Create a new order</h1>
+    <form action="/authorize" method="POST">
+        <label for="number">Insert the number of prescriptions to be scanned</label><br>
+        <input type="number" id="pnumber" name="pnumber" value="1" min="1"/><br>
+        <input type="submit" value="Submit">
+    </form>
 
    <h1>Ask for a refund</h1>
    <a href="/insurance"><button>Insurance</button></a>
