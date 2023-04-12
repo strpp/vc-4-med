@@ -14,11 +14,12 @@ contract vc4med {
   struct Prescription {
     string prId;
     uint256 quantity;
+    uint256 maxQuantity;
     uint256 price;
   }
 
   struct Order {
-    Prescription[] p;
+    Prescription[] prescriptions;
     string orderId;
     uint256 totalPrice;
   }
@@ -28,11 +29,11 @@ contract vc4med {
   );
 
   bytes32 constant PRESCRIPTION_TYPEHASH = keccak256(
-    "Prescription(string prId,uint256 quantity,uint256 price)"
+    "Prescription(string prId,uint256 quantity,uint256 maxQuantity,uint256 price)"
   );
 
   bytes32 constant ORDER_TYPEHASH = keccak256(
-    "Order(Prescription[] p,string orderId,uint256 totalPrice)Prescription(string prId,uint256 quantity,uint256 price)"
+    "Order(Prescription[] prescriptions,string orderId,uint256 totalPrice)Prescription(string prId,uint256 quantity,uint256 maxQuantity,uint256 price)"
   );
 
   bytes32 DOMAIN_SEPARATOR;
@@ -96,6 +97,19 @@ contract vc4med {
     pharmasAddr[a] = true;
   }
 
+  function getOrder(string memory orderId) public view returns (bool){
+    return orders[orderId];
+  }
+
+  function getAlreadyRedeemedQuantity(string memory prId) public view returns (uint256){
+    return alreadyRedeemedQuantity[prId];
+  }
+
+  function isPrescriptionValid(string memory prId, uint256 toRedeem, uint256 maxQuantity) public view returns (bool){
+    if (alreadyRedeemedQuantity[prId] + toRedeem > maxQuantity) return false; //quantity exceeded
+    return true;
+  }
+
   /* Hash functions for EIP 712 */
   function hash(EIP712Domain memory eip712Domain) internal pure returns (bytes32) {
     return keccak256(abi.encode(
@@ -112,6 +126,7 @@ contract vc4med {
       PRESCRIPTION_TYPEHASH,
       keccak256(bytes(prescription.prId)),
       prescription.quantity,
+      prescription.maxQuantity,
       prescription.price
     ));
   }
@@ -127,7 +142,7 @@ contract vc4med {
   function hash(Order memory order) internal pure returns (bytes32) {
     return keccak256(abi.encode(
       ORDER_TYPEHASH,
-      hash(order.p),
+      hash(order.prescriptions),
       keccak256(bytes(order.orderId)),
       order.totalPrice
     ));
@@ -146,7 +161,18 @@ contract vc4med {
   // Order: JSON file with all the info to complete the payment
   // Sig : hash signed by the pharmacy to check the order has not been tampered
   function payOrder(Order memory order, bytes memory sig) public payable {
-   require(sig.length == 65, "invalid signature length");
+    require(sig.length == 65, "invalid signature length");
+    require(!(orders[order.orderId]), 'Order has already been delivered');
+    for(uint i=0; i<order.prescriptions.length; i++){
+      require(isPrescriptionValid(
+        order.prescriptions[i].prId,
+        order.prescriptions[i].quantity,
+        order.prescriptions[i].maxQuantity),
+       'Max quantity exceeded'
+      );    
+    alreadyRedeemedQuantity[order.prescriptions[i].prId] += order.prescriptions[i].quantity;
+    }
+
    uint8 v; bytes32 r; bytes32 s;
    assembly {
     /*
@@ -169,10 +195,6 @@ contract vc4med {
     require(sent, "Failed to pay");
 
     orders[order.orderId] = true;
-
-    for(uint i=0; i<order.p.length; i++){
-      alreadyRedeemedQuantity[order.p[i].prId] += order.p[i].quantity;
-    }
 
     emit orderHasBeenPayed(order.orderId, msg.value, pharma);
 
