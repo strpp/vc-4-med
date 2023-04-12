@@ -93,7 +93,7 @@ async function signOrder(order){
        - This is DApp Specific
        - Be as explicit as possible when building out the message schema.
       */
-      p : order['p'],
+      prescriptions : order['prescriptions'],
       orderId: order['orderId'],
       totalPrice: order['totalPrice']
     
@@ -110,7 +110,7 @@ async function signOrder(order){
       ],
       // Refer to PrimaryType
       Order: [
-        { name: 'p', type: 'Prescription[]' },
+        { name: 'prescriptions', type: 'Prescription[]' },
         { name: 'orderId', type: 'string' },
         { name: 'totalPrice', type: 'uint256' },
       ],

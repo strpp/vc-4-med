@@ -18,7 +18,7 @@ contract vc4med {
   }
 
   struct Order {
-    Prescription[] p;
+    Prescription[] prescriptions;
     string orderId;
     uint256 totalPrice;
   }
@@ -32,7 +32,7 @@ contract vc4med {
   );
 
   bytes32 constant ORDER_TYPEHASH = keccak256(
-    "Order(Prescription[] p,string orderId,uint256 totalPrice)Prescription(string prId,uint256 quantity,uint256 price)"
+    "Order(Prescription[] prescriptions,string orderId,uint256 totalPrice)Prescription(string prId,uint256 quantity,uint256 price)"
   );
 
   bytes32 DOMAIN_SEPARATOR;
@@ -127,7 +127,7 @@ contract vc4med {
   function hash(Order memory order) internal pure returns (bytes32) {
     return keccak256(abi.encode(
       ORDER_TYPEHASH,
-      hash(order.p),
+      hash(order.prescriptions),
       keccak256(bytes(order.orderId)),
       order.totalPrice
     ));
@@ -170,8 +170,8 @@ contract vc4med {
 
     orders[order.orderId] = true;
 
-    for(uint i=0; i<order.p.length; i++){
-      alreadyRedeemedQuantity[order.p[i].prId] += order.p[i].quantity;
+    for(uint i=0; i<order.prescriptions.length; i++){
+      alreadyRedeemedQuantity[order.prescriptions[i].prId] += order.prescriptions[i].quantity;
     }
 
     emit orderHasBeenPayed(order.orderId, msg.value, pharma);
