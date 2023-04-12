@@ -7,6 +7,7 @@ import uuid
 import os
 import random
 import contract_listener as contract_listener
+import collections.abc
 from web3 import Web3
 
 DID_KEY = os.getenv('DID_KEY')
@@ -67,13 +68,14 @@ async def verify(stream_id, number_of_prescriptions, red, socketio):
             await didkit.verify_presentation(json.dumps(presentation), json.dumps(didkit_options))
 
             # Check VCs are unique
-            ids = []
-            for vc in presentation['verifiableCredential']:
-                if (vc['credentialSubject']['id']) not in ids:
-                    ids.append(vc['credentialSubject']['id'])
-                else:
-                    #TODO emit error with socketio
-                    return 'Error: VCs are not unique', 500
+            if isinstance(presentation['verifiableCredential'], collections.abc.Sequence): #if there is only one vc, this is not an array
+                ids = []
+                for vc in presentation['verifiableCredential']:
+                    if (vc['credentialSubject']['id']) not in ids:
+                        ids.append(vc['credentialSubject']['id'])
+                    else:
+                        #TODO emit error with socketio
+                        return 'Error: VCs are not unique', 500
 
             # Redirect client via server push
             socket_id = json.loads(red.get(stream_id).decode())['socket_id']
@@ -91,38 +93,55 @@ async def verify(stream_id, number_of_prescriptions, red, socketio):
 
 
 def callback(stream_id, red):
-    vcs = json.loads(red.get(stream_id).decode())['vp']['verifiableCredential']
+    vcs = []
+    result = json.loads(red.get(stream_id).decode())['vp']['verifiableCredential']
+    # if we have multiple vcs, just save the array
+    if isinstance(result, collections.abc.Sequence):
+        vcs = result
+    # if vc is single, create an array
+    else:
+        vcs.append(result)
+
     return render_template('prescription.html', vcs={'vcs': vcs}, stream_id=stream_id)
 
 # Handle request for creating a new order from pharmacy
 def order(stream_id, red, socketio):
-    print(request.form)
 
     prescriptions = json.loads(red.get(stream_id).decode())['vp']['verifiableCredential']
-
     prs = []
     total_price = 0
 
-    # get prescriptions
-    for p in prescriptions:
+    if isinstance(prescriptions, collections.abc.Sequence):
+        # get prescriptions
+        for p in prescriptions:
+            price = random.randint(1, 50) # TODO: just a mockup
+            prescription = {
+                "prId" : p['credentialSubject']['id'],
+                "quantity" : request.form.get(p['credentialSubject']['prescription']['drug']),
+                "maxQuantity" : p['credentialSubject']['prescription']['dosage'],
+                "price" : price
+            }
+            prs.append(prescription)
+            total_price+=price
+    else: #just one prescription
         price = random.randint(1, 50) # TODO: just a mockup
-        prescription = {
-            "prId" : p['credentialSubject']['id'],
-            "quantity" : request.form.get(p['credentialSubject']['prescription']['drug']),
-            "maxQuantity" : p['credentialSubject']['prescription']['dosage'],
-            "price" : price
-        }
-        prs.append(prescription)
-        total_price+=price
+        prs.append(
+            {
+                "prId" : prescriptions['credentialSubject']['id'],
+                "quantity" : request.form.get(prescriptions['credentialSubject']['prescription']['drug']),
+                "maxQuantity" : prescriptions['credentialSubject']['prescription']['dosage'],
+                "price" : price
+            }
+        )
+        total_price=price
     
     # create JSON order to be signed
     order_id = uuid.uuid4().hex
     order = {
-        "p" : prs,
+        "prescriptions" : prs,
         "orderId" : order_id,
         "totalPrice" : total_price
     }
-
     red.set(order_id, json.dumps({'order' : order, 'stream_id' : stream_id, 'signed_order' : 'null'}))
     return order
 
