@@ -7,13 +7,14 @@ contract("Performance", (accounts) => {
   let contract;
 
   before(async ()=>{
-    const contract = await vc4med.deployed();
+    contract = await vc4med.deployed();
   });
   
   it("Add 100 doctor", async()=>{
     let gas = 0;
+    let doctor;
     for(let i=0; i<100; i++){
-        let doctor = `did:key:${(Math.random() + 1).toString(36).substring(48)}`;
+        doctor = `did:key:${(Math.random() + 1).toString(36).substring(48)}`;
         let tx = await contract.addNewDoctor(doctor);
         gas += tx.receipt.gasUsed;
     }
@@ -54,7 +55,7 @@ contract("Performance", (accounts) => {
       }
     const sig = '0x09a711da4d5d6c0d23a1fa979a4120321567a39f6b2c3d501c30a37d969df4882c3ae3041abe4269d32e1e78aea576c8fe4a470fb2accc7be36bcae15f3c5d8b1c'
     for(let i=0; i<1; i++){
-        const tx = await c.payOrder(order,sig,{from: accounts[3], value: order["totalPrice"]*1e18});
+        const tx = await contract.payOrder(order,sig,{from: accounts[3], value: order["totalPrice"]*1e18});
         gas += tx.receipt.gasUsed;
     }
     console.log(gas);

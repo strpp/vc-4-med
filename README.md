@@ -30,4 +30,4 @@ CouchDB interface (Fauxton) on 5984/_utils  <br />
 ## TEST SMART CONTRACT ON localhost
 Run a local Ganache instance.
 Go inside vc-4-med/polygon and launch test script: <code>truffle test test/test_vc4med.js development</code>
-Performance analysis settings: ganache -a 100 -b 2 -g 150
+Performance analysis settings: ganache -a 100 -b 2 -g 150000000000
