@@ -18,8 +18,8 @@
       });
 
       socket.on('stream_id', (resp) => {
-        console.log(`You should be redirected at: http://192.168.1.20:5001/callback/${resp['stream_id']}`);
-        window.location.replace(`http://192.168.1.20:5001/callback/${resp['stream_id']}`);
+        console.log(`You should be redirected at: /callback/${resp['stream_id']}`);
+        window.location.replace(`/callback/${resp['stream_id']}`);
       });
   </script>
   

@@ -4,6 +4,7 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 import didkit
 import json
+import collections.abc
 
 app = Flask(__name__)
 CORS(app)
@@ -31,7 +32,6 @@ async def refund():
         except:
             print('Failed receipt check')
             return 'Internal Server Error', 500
-        
         # Check Prescription presentation
         try:
             prescription = json.loads(vp)['verifiableCredential'][0]['credentialSubject']['receipt']['vp']
@@ -43,7 +43,15 @@ async def refund():
             return 'Internal Server Error', 500
         
         # Check Prescription credential
-        vc_list = json.loads(vp)['verifiableCredential'][0]['credentialSubject']['receipt']['vp']['verifiableCredential']
+        vc_list = []
+        data = json.loads(vp)['verifiableCredential'][0]['credentialSubject']['receipt']['vp']['verifiableCredential']
+        
+        # if we have only one vc, this is not an array so we have to check and in case is not, build one
+        if isinstance(data, collections.abc.Sequence):
+            vc_list = data
+        else:
+            vc_list.append(data)
+
         for vc in vc_list:
             try:
                 verification_method = vc['proof']['verificationMethod']

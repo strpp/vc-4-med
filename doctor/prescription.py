@@ -1,4 +1,5 @@
 from flask import jsonify, request, render_template, url_for
+from flask_socketio import SocketIO, join_room, leave_room
 from datetime import timedelta, datetime
 import json
 import uuid
@@ -12,17 +13,15 @@ doctor = 'Dr. Mario Rossi'
 
 REDIS_DATA_TIME_TO_LIVE = 1800
 
-def init_app(app, red) :
-    app.add_url_rule('/endpoint/<stream_id>',  view_func=endpoint, methods = ['GET', 'POST'], defaults={"red" : red})
-    app.add_url_rule('/generate-credential',  view_func=generate_credential, methods = ['POST'], defaults={"red" : red})
+def init_app(app, red, socketio) :
+    app.add_url_rule('/endpoint/<stream_id>',  view_func=endpoint, methods = ['GET', 'POST'], defaults={"red" : red, "socketio" : socketio})
+    app.add_url_rule('/callback/<stream_id>',  view_func=callback, methods = ['GET', 'POST'], defaults={"red" : red})
+    app.add_url_rule('/generate-credential',  view_func=generate_credential, methods = ['POST'], defaults={"red" : red, "socketio" : socketio})
     return
 
 # API to interact with smartphone (wallet)
-async def endpoint(stream_id, red):
-
-    
+async def endpoint(stream_id, red, socketio):
     if request.method == 'GET':
-        
         try:
             print(f'Stream ID: {stream_id}')
             data = json.loads(red.get(stream_id).decode())
@@ -68,6 +67,7 @@ async def endpoint(stream_id, red):
     else :  #POST
 
         credential = json.loads(red.get(stream_id).decode())['vc']
+        socket_id = json.loads(red.get(f'ws:{stream_id}').decode())['socket_id']
 
         # does not work => didkit.DIDKitException: Missing verification relationship
         didkit_options = {
@@ -78,15 +78,29 @@ async def endpoint(stream_id, red):
         signed_credential =  await didkit.issue_credential(json.dumps(credential), json.dumps({}), jwk)
         
         if not signed_credential :         # send event to client agent to go forward
+            socketio.emit('stream_id', {'stream_id' : stream_id}, to=socket_id)
             return jsonify('Server failed'), 500
+        
+        # Redirect client via server push
+        red.set(f'ws:{stream_id}', json.dumps({'socket_id' : socket_id, 'success' : True}))
+        socketio.emit('stream_id', {'stream_id' : stream_id}, to=socket_id)
         
         # Success : send event to client agent to go forward
         return jsonify(signed_credential)
 
-def generate_credential(red):
+def generate_credential(red, socketio):
         
         #Generate stream id
         stream_id = str(uuid.uuid4().hex)
+
+        @socketio.on('subscribe')
+        def subscribe(data):
+            # Add client to private channel to get further updates
+            join_room(data['socket_id'])
+            # Save socket_id on server session to make /authorize able to link socket_id and stream_id
+            socket_id = data['socket_id']
+            print(f'socket_id : {socket_id}, stream_id : {stream_id}')
+            red.set(f'ws:{stream_id}', json.dumps({'socket_id' : socket_id, 'success' : False}))
 
         form_keys = list(request.form.keys())
          
@@ -111,3 +125,8 @@ def generate_credential(red):
         #Generate QR Code
         url = url_for('endpoint', stream_id=stream_id, _external=True)
         return render_template('qrcode.html', url=url)
+
+def callback(stream_id, red):
+    success = json.loads(red.get(f'ws:{stream_id}').decode())['success']
+    return render_template('callback.html', success=success)
+

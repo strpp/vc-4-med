@@ -152,7 +152,7 @@ async function signOrder(order){
       sendSignedOrder.send(JSON.stringify({"signedOrder" : signedOrder}));
     
       sendSignedOrder.addEventListener("load", async (event)=>{
-        if(event.target.status == 200) window.location.href = `http://192.168.1.20:5001/order/qr/${event.target.responseText}`;
+        if(event.target.status == 200) window.location.href = `/order/qr/${event.target.responseText}`;
       });
     }
   );

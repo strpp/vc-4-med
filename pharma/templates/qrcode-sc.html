@@ -17,7 +17,7 @@
         
       // Define what happens on successful data submission
       XHR.addEventListener("load", async (event) => {
-        if(event.target.status == 200) window.location.href = `http://192.168.1.20:5001/success/${event.target.responseText}`;
+        if(event.target.status == 200) window.location.href = `/success/${event.target.responseText}`;
       });
 
       // Define what happens in case of error
@@ -25,7 +25,7 @@
 
       // Set up our request
       const code = "{{code}}"
-      const url = `http://192.168.1.20:5001/order/wait/${code}`
+      const url = `/order/wait/${code}`
       XHR.open("GET", url);
       XHR.send()
     }
