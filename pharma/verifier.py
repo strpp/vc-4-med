@@ -114,26 +114,30 @@ def order(stream_id, red, socketio):
     if isinstance(prescriptions, collections.abc.Sequence):
         # get prescriptions
         for p in prescriptions:
-            price = random.randint(1, 50) # TODO: just a mockup
-            prescription = {
-                "prId" : p['credentialSubject']['id'],
-                "quantity" : request.form.get(p['credentialSubject']['prescription']['drug']),
-                "maxQuantity" : p['credentialSubject']['prescription']['dosage'],
-                "price" : price
-            }
-            prs.append(prescription)
-            total_price+=price
+            quantity = request.form.get(p['credentialSubject']['prescription']['drug'])
+            if quantity > 0 :
+                price = random.randint(1, 50) # TODO: just a mockup
+                prescription = {
+                    "prId" : p['credentialSubject']['id'],
+                    "quantity" : quantity,
+                    "maxQuantity" : p['credentialSubject']['prescription']['dosage'],
+                    "price" : price
+                }
+                prs.append(prescription)
+                total_price+=(price*quantity)
     else: #just one prescription
-        price = random.randint(1, 50) # TODO: just a mockup
-        prs.append(
-            {
-                "prId" : prescriptions['credentialSubject']['id'],
-                "quantity" : request.form.get(prescriptions['credentialSubject']['prescription']['drug']),
-                "maxQuantity" : prescriptions['credentialSubject']['prescription']['dosage'],
-                "price" : price
-            }
-        )
-        total_price=price
+        quantity = request.form.get(prescriptions['credentialSubject']['prescription']['drug'])
+        if quantity > 0:
+            price = random.randint(1, 50) # TODO: just a mockup
+            prs.append(
+                {
+                    "prId" : prescriptions['credentialSubject']['id'],
+                    "quantity" : quantity,
+                    "maxQuantity" : prescriptions['credentialSubject']['prescription']['dosage'],
+                    "price" : price
+                }
+            )
+            total_price=(price*quantity)
     
     # create JSON order to be signed
     order_id = uuid.uuid4().hex
