@@ -21,7 +21,7 @@ async function pay(){
             )
             .send({from:account[0], value: order['order']['totalPrice']*1e18});
         //alert(`Payment successfully executed with TX /${tx.transactionHash}`)
-        window.location.href = `http://192.168.1.20:5001/success/${tx.transactionHash}`;
+        window.location.href = `/success/${tx.transactionHash}`;
     }catch(e){
         const errorJson = e.message.substring(e.message.indexOf('{'), e.message.lastIndexOf("'"))
         const tx = JSON.parse(errorJson)['value']['data']['data']
