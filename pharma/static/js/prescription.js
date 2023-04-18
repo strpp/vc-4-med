@@ -76,59 +76,14 @@ async function signOrder(order){
   const { ethereum } = window;
   var from = await ethereum.request({ method: 'eth_requestAccounts' });
 
-  const msgParams = JSON.stringify({
-    domain: {
-      // Defining the chain aka Rinkeby testnet or Ethereum Main Net
-      chainId: 1337,
-      // Give a user friendly name to the specific contract you are signing for.
-      name: 'vc4med',
-      // If name isn't enough add verifying contract to make sure you are establishing contracts with the proper entity
-      verifyingContract: '0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC',
-      // Just let's you know the latest version. Definitely make sure the field name is correct.
-      version: '1',
-    },
+  
+  let msgParams = await fetch('/static/eip712.json').then((response) => response.json()).then((json) => json);
+  msgParams['message']['prescriptions'] = order['prescriptions']
+  msgParams['message']['orderId'] = orderId
+  msgParams['message']['totalPrice'] = order['totalPrice']
+  msgParams['message']['pharmacy'] = from[0]
 
-    // Defining the message signing data content.
-    message: {
-      /*
-       - Anything you want. Just a JSON Blob that encodes the data you want to send
-       - No required fields
-       - This is DApp Specific
-       - Be as explicit as possible when building out the message schema.
-      */
-      prescriptions : order['prescriptions'],
-      orderId: order['orderId'],
-      totalPrice: order['totalPrice'],
-      pharmacy: from[0]
-    },
-    // Refers to the keys of the *types* object below.
-    primaryType: 'Order',
-    types: {
-      // TODO: Clarify if EIP712Domain refers to the domain the contract is hosted on
-      EIP712Domain: [
-        { name: 'name', type: 'string' },
-        { name: 'version', type: 'string' },
-        { name: 'chainId', type: 'uint256' },
-        { name: 'verifyingContract', type: 'address' },
-      ],
-      // Refer to PrimaryType
-      Order: [
-        { name: 'prescriptions', type: 'Prescription[]' },
-        { name: 'orderId', type: 'string' },
-        { name: 'totalPrice', type: 'uint256' },
-        { name: 'pharmacy', type: 'address' },
-      ],
-      // Not an EIP712Domain definition
-      Prescription: [
-        { name: 'prId', type: 'string' },
-        { name: 'quantity', type: 'uint256' },
-        { name: 'maxQuantity', type: 'uint256' },
-        { name: 'price', type: 'uint256' },
-      ],
-    },
-  });
-
-  var params = [from[0], msgParams];
+  var params = [from[0], JSON.stringify(msgParams)];
   var method = 'eth_signTypedData_v4';
 
   ethereum.sendAsync(

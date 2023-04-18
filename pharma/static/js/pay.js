@@ -7,11 +7,11 @@ async function pay(){
                     .replace('"{','{').replace('}"','}')
                     .replace('""','"').replace('""','"'))
     // Load web 3 instance and contract
-    const web3 = new Web3(Web3.givenProvider || "ws://localhost:8545");
+    const web3 = new Web3(Web3.givenProvider ||  mumbaiUrl);
     const { ethereum } = window;
     var account = await ethereum.request({ method: 'eth_requestAccounts' });
-    const ABI_CONTRACT =  ""
-    const vc4med = new web3.eth.Contract(ABI_CONTRACT, '0x2e3D6752536566ED51c805A86070BA596052FCb6')
+    const ABI_CONTRACT =  await fetch('/static/vc4med.json').then((response) => response.json()).then((json) => json['abi']);
+    const vc4med = new web3.eth.Contract(ABI_CONTRACT, '0xCD3D21d1e7f8303d2450a2954444E04a2AFB20AE')
 
     // pay
     try{

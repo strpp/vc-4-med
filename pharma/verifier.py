@@ -11,6 +11,7 @@ import collections.abc
 from web3 import Web3
 
 DID_KEY = os.getenv('DID_KEY')
+MUMBAI_URL = os.getenv('MUMBAI_URL')
 VERIFICATION_METHOD = 'did:key:z6MktaAfLYZF3khaHZuWCho1vrJkDPXx1nkHtPSXFSwk6g5i#z6MktaAfLYZF3khaHZuWCho1vrJkDPXx1nkHtPSXFSwk6g5i'
 jwk = json.dumps(json.load(open("key.pem", "r")))
 
@@ -170,8 +171,7 @@ async def wait_order(code, red, db):
     stream_id = rs['stream_id']
 
     # run blockchain listener
-    # NOTE: commented til we deploy on mumbai tx = contract_listener.main(order_id)
-    tx = '0x1234abcd'
+    tx = contract_listener.main(order_id)
     if not tx:
         return 'Timeout while listening blockchain', 500
 
@@ -199,7 +199,7 @@ async def wait_order(code, red, db):
 
 def pay_order(code, red):
     order = json.loads(red.get(code).decode())
-    return render_template('pay.html',order=json.dumps(order))
+    return render_template('pay.html',order=json.dumps(order), mumbai_url=MUMBAI_URL)
 
 def success(tx, red):
     return f'Payment successfully executed with TxHash:{tx}'

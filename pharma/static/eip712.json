@@ -1,0 +1,36 @@
+{
+    "domain": {
+      "chainId": 80001,
+      "name": "vc4med",
+      "verifyingContract": "0xCD3D21d1e7f8303d2450a2954444E04a2AFB20AE",
+      "version": "1"
+    },
+
+    "message": {
+      "prescriptions" : [],
+      "orderId": "",
+      "totalPrice": "",
+      "pharmacy": ""
+    },
+    "primaryType": "Order",
+    "types": {
+      "EIP712Domain": [
+        { "name": "name", "type": "string" },
+        { "name": "version", "type": "string" },
+        { "name": "chainId", "type": "uint256" },
+        { "name": "verifyingContract", "type": "address" }
+      ],
+      "Order": [
+        { "name": "prescriptions", "type": "Prescription[]" },
+        { "name": "orderId", "type": "string" },
+        { "name": "totalPrice", "type": "uint256" },
+        { "name": "pharmacy", "type": "address" }
+      ],
+      "Prescription": [
+        { "name": "prId", "type": "string" },
+        { "name": "quantity", "type": "uint256" },
+        { "name": "maxQuantity", "type": "uint256" },
+        { "name": "price", "type": "uint256" }
+      ]
+    }
+  }

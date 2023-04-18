@@ -1,3 +1,4 @@
+import os
 import json
 import asyncio
 from time import sleep
@@ -5,13 +6,14 @@ from hexbytes import HexBytes
 from web3 import Web3
 
 # add your blockchain connection information
-ganache_url = 'http://localhost:8545'
-web3 = Web3(Web3.HTTPProvider(ganache_url))
+#ganache_url = 'http://localhost:8545'
+MUMBAI_URL = os.getenv('MUMBAI_URL')
+VC_4_MED_ADDRESS = os.getenv('VC_4_MED_ADDRESS')
+web3 = Web3(Web3.HTTPProvider(MUMBAI_URL))
 
 # address and abi
-address = '0xAd276bb2495190Bc05Cf40f388ED40468916c1aF'
-abi = json.load(open('static/contract_abi.json', 'r'))['abi']
-contract = web3.eth.contract(address=address, abi=abi)
+abi = json.load(open('static/vc4med.json', 'r'))['abi']
+contract = web3.eth.contract(address=VC_4_MED_ADDRESS, abi=abi)
 
 # filter events according to condition and return transaction hash related to it
 def handle_event(events, condition):
