@@ -164,7 +164,7 @@ contract vc4med {
   // Sig : hash signed by the pharmacy to check the order has not been tampered
   function payOrder(Order memory order, bytes memory sig) public payable {
     require(sig.length == 65, "invalid signature length");
-    require(msg.value == order.totalPrice * 1e18, 'Amount of ETH is not enough to pay the order');
+    require(msg.value >= order.totalPrice * 1e18, 'Amount of ETH is not enough to pay the order');
     require(!(orders[order.orderId]), 'Order has already been delivered');
     require(isPharma(order.pharmacy), 'Signer is not a valid Pharmacy');
 
@@ -196,7 +196,7 @@ contract vc4med {
 
     address signer = verify(order, v, r, s);
     require(signer == order.pharmacy, 'Signer and Pharmacy does not correspond');
-    (bool sent, ) = (payable (order.pharmacy)).call{value: msg.value}("");
+    (bool sent, ) = (payable (order.pharmacy)).call{value: order.totalPrice * 1e18}("");
     require(sent, "Failed to pay");
 
     orders[order.orderId] = true;

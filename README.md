@@ -27,7 +27,6 @@ Pharma on 5001  <br />
 Insurance on 5002  <br />
 CouchDB interface (Fauxton) on 5984/_utils  <br />
 
-## TEST SMART CONTRACT ON localhost
-Run a local Ganache instance.
-Go inside vc-4-med/polygon and launch test script: <code>truffle test test/test_vc4med.js development</code>
-Performance analysis settings: ganache -a 100 -b 2 -g 150000000000
+## TEST SMART CONTRACT ON Mumbai
+contract address:    0xCD3D21d1e7f8303d2450a2954444E04a2AFB20AE
+owner:               0xbd332ee288eE1335fae22c49906b06Ef050a070d
