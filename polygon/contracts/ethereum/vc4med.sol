@@ -22,6 +22,7 @@ contract vc4med {
     Prescription[] prescriptions;
     string orderId;
     uint256 totalPrice;
+    address pharmacy;
   }
 
   bytes32 constant EIP712DOMAIN_TYPEHASH = keccak256(
@@ -33,7 +34,7 @@ contract vc4med {
   );
 
   bytes32 constant ORDER_TYPEHASH = keccak256(
-    "Order(Prescription[] prescriptions,string orderId,uint256 totalPrice)Prescription(string prId,uint256 quantity,uint256 maxQuantity,uint256 price)"
+    "Order(Prescription[] prescriptions,string orderId,uint256 totalPrice,address pharmacy)Prescription(string prId,uint256 quantity,uint256 maxQuantity,uint256 price)"
   );
 
   bytes32 DOMAIN_SEPARATOR;
@@ -144,7 +145,8 @@ contract vc4med {
       ORDER_TYPEHASH,
       hash(order.prescriptions),
       keccak256(bytes(order.orderId)),
-      order.totalPrice
+      order.totalPrice,
+      order.pharmacy
     ));
   }
 
@@ -162,7 +164,10 @@ contract vc4med {
   // Sig : hash signed by the pharmacy to check the order has not been tampered
   function payOrder(Order memory order, bytes memory sig) public payable {
     require(sig.length == 65, "invalid signature length");
+    require(msg.value == order.totalPrice * 1e18, 'Amount of ETH is not enough to pay the order');
     require(!(orders[order.orderId]), 'Order has already been delivered');
+    require(isPharma(order.pharmacy), 'Signer is not a valid Pharmacy');
+
     for(uint i=0; i<order.prescriptions.length; i++){
       require(isPrescriptionValid(
         order.prescriptions[i].prId,
@@ -187,19 +192,16 @@ contract vc4med {
     s := mload(add(sig, 64))
     // final byte (first byte of the next 32 bytes)
     v := byte(0, mload(add(sig, 96)))
-    }     
-    address payable pharma = payable(verify(order, v, r, s));
-    require(isPharma(pharma), 'Signer is not a valid Pharmacy');
-    require(msg.value == order.totalPrice * 1e18, 'Amount of ETH is not enough to pay the order');
-    (bool sent, ) = pharma.call{value: msg.value}("");
+    }
+
+    address signer = verify(order, v, r, s);
+    require(signer == order.pharmacy, 'Signer and Pharmacy does not correspond');
+    (bool sent, ) = (payable (order.pharmacy)).call{value: msg.value}("");
     require(sent, "Failed to pay");
 
     orders[order.orderId] = true;
 
-    emit orderHasBeenPayed(order.orderId, msg.value, pharma);
+    emit orderHasBeenPayed(order.orderId, msg.value, order.pharmacy);
 
   }
-
-
-
 }

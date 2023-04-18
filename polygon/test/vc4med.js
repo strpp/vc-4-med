@@ -20,17 +20,13 @@ contract("Vc4Med", accounts => {
          prId: "did:example:5c6562f2aecf4179beb7833e4cde6396",
          quantity: 1,
          maxQuantity: 2,
-         price: 14
-      },{
-        prId: "did:example:797a54d456bd4f6894358853ec2fb5f0",
-        quantity: 1,
-        maxQuantity: 4,
-        price: 38
-     }],
-      orderId: "38de0ac738614f729d57c7904bda5735",
-      totalPrice: 52
+         price: 22
+      }],
+      orderId: "62097173a4b04ce8824a8b8781a353ed",
+      totalPrice: 22,
+      pharmacy:"0x2e3D6752536566ED51c805A86070BA596052FCb6",
     }
-    const sig = '0x09a711da4d5d6c0d23a1fa979a4120321567a39f6b2c3d501c30a37d969df4882c3ae3041abe4269d32e1e78aea576c8fe4a470fb2accc7be36bcae15f3c5d8b1c'
+    const sig = '0x48862b4944d0d276b252b1557754ebf21917972d8c396c7758818d2f8e44d2e8719fa1c88663d25656de844c7096a54b12bce76f4d0e621056fe2d4409478d8c1b'
     const hash = await c.payOrder(order,sig,{from: accounts[3], value: order["totalPrice"]*1e18});
     //console.log(hash.tx)
   });
