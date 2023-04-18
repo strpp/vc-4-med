@@ -12,6 +12,7 @@ from web3 import Web3
 
 DID_KEY = os.getenv('DID_KEY')
 MUMBAI_URL = os.getenv('MUMBAI_URL')
+PHARMACY_ADDRESS = os.getenv('PHARMACY_ADDRESS')
 VERIFICATION_METHOD = 'did:key:z6MktaAfLYZF3khaHZuWCho1vrJkDPXx1nkHtPSXFSwk6g5i#z6MktaAfLYZF3khaHZuWCho1vrJkDPXx1nkHtPSXFSwk6g5i'
 jwk = json.dumps(json.load(open("key.pem", "r")))
 
@@ -117,7 +118,7 @@ def order(stream_id, red, socketio):
         for p in prescriptions:
             quantity = int(request.form.get(p['credentialSubject']['prescription']['drug']))
             if quantity > 0 :
-                price = random.randint(1, 50) # TODO: just a mockup
+                price = 1 # TODO: just a mockup
                 prescription = {
                     "prId" : p['credentialSubject']['id'],
                     "quantity" : quantity,
@@ -129,7 +130,7 @@ def order(stream_id, red, socketio):
     else: #just one prescription
         quantity = int(request.form.get(prescriptions['credentialSubject']['prescription']['drug']))
         if ( quantity > 0):
-            price = random.randint(1, 50) # TODO: just a mockup
+            price = 1 # TODO: just a mockup
             prs.append(
                 {
                     "prId" : prescriptions['credentialSubject']['id'],
@@ -145,7 +146,8 @@ def order(stream_id, red, socketio):
     order = {
         "prescriptions" : prs,
         "orderId" : order_id,
-        "totalPrice" : total_price
+        "totalPrice" : total_price,
+        "pharmacy" : PHARMACY_ADDRESS
     }
     red.set(order_id, json.dumps({'order' : order, 'stream_id' : stream_id, 'signed_order' : 'null'}))
     return order

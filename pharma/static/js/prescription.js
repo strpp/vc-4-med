@@ -105,7 +105,7 @@ async function signOrder(order){
 
       sendSignedOrder.open("POST", `http://192.168.1.20:5001/order/sign/${orderId}`);
       sendSignedOrder.setRequestHeader("Content-Type", "application/json");
-      alert(signedOrder)
+      //alert(signedOrder)
       sendSignedOrder.send(JSON.stringify({"signedOrder" : signedOrder}));
     
       sendSignedOrder.addEventListener("load", async (event)=>{

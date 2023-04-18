@@ -18,8 +18,8 @@ contract = web3.eth.contract(address=VC_4_MED_ADDRESS, abi=abi)
 # filter events according to condition and return transaction hash related to it
 def handle_event(events, condition):
     for i in range(0, len(events)):
-        recv = events[i].args._to
-        if recv == condition:
+        orderId = events[i].args.orderId
+        if orderId == condition:
             return (events[i].transactionHash).hex()
     return False
 
@@ -29,7 +29,7 @@ def handle_event(events, condition):
 TIMEOUT = 500
 POLLING_INTERVAL = 2
 def main(condition):
-    event_filter = contract.events.Transfer.create_filter(fromBlock='latest')
+    event_filter = contract.events.orderHasBeenPayed.create_filter(fromBlock='latest')
     i = 0
     while(i<TIMEOUT):
         events = event_filter.get_new_entries()

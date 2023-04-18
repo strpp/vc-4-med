@@ -1,4 +1,5 @@
 const payButton = document.getElementById('payButton');
+
 payButton.addEventListener('click', async () => { pay() });
 async function pay(){
     // ask for order and signed order
