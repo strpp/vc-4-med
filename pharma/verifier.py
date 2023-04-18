@@ -114,7 +114,7 @@ def order(stream_id, red, socketio):
     if isinstance(prescriptions, collections.abc.Sequence):
         # get prescriptions
         for p in prescriptions:
-            quantity = request.form.get(p['credentialSubject']['prescription']['drug'])
+            quantity = int(request.form.get(p['credentialSubject']['prescription']['drug']))
             if quantity > 0 :
                 price = random.randint(1, 50) # TODO: just a mockup
                 prescription = {
@@ -126,8 +126,8 @@ def order(stream_id, red, socketio):
                 prs.append(prescription)
                 total_price+=(price*quantity)
     else: #just one prescription
-        quantity = request.form.get(prescriptions['credentialSubject']['prescription']['drug'])
-        if quantity > 0:
+        quantity = int(request.form.get(prescriptions['credentialSubject']['prescription']['drug']))
+        if ( quantity > 0):
             price = random.randint(1, 50) # TODO: just a mockup
             prs.append(
                 {

@@ -73,6 +73,9 @@ async function signOrder(order){
   let signedOrder;
   const orderId = order['orderId']
 
+  const { ethereum } = window;
+  var from = await ethereum.request({ method: 'eth_requestAccounts' });
+
   const msgParams = JSON.stringify({
     domain: {
       // Defining the chain aka Rinkeby testnet or Ethereum Main Net
@@ -95,8 +98,8 @@ async function signOrder(order){
       */
       prescriptions : order['prescriptions'],
       orderId: order['orderId'],
-      totalPrice: order['totalPrice']
-    
+      totalPrice: order['totalPrice'],
+      pharmacy: from[0]
     },
     // Refers to the keys of the *types* object below.
     primaryType: 'Order',
@@ -113,6 +116,7 @@ async function signOrder(order){
         { name: 'prescriptions', type: 'Prescription[]' },
         { name: 'orderId', type: 'string' },
         { name: 'totalPrice', type: 'uint256' },
+        { name: 'pharmacy', type: 'address' },
       ],
       // Not an EIP712Domain definition
       Prescription: [
@@ -123,9 +127,6 @@ async function signOrder(order){
       ],
     },
   });
-
-  const { ethereum } = window;
-  var from = await ethereum.request({ method: 'eth_requestAccounts' });
 
   var params = [from[0], msgParams];
   var method = 'eth_signTypedData_v4';
@@ -149,6 +150,7 @@ async function signOrder(order){
 
       sendSignedOrder.open("POST", `http://192.168.1.20:5001/order/sign/${orderId}`);
       sendSignedOrder.setRequestHeader("Content-Type", "application/json");
+      alert(signedOrder)
       sendSignedOrder.send(JSON.stringify({"signedOrder" : signedOrder}));
     
       sendSignedOrder.addEventListener("load", async (event)=>{
