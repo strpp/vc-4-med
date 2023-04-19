@@ -26,19 +26,32 @@ def handle_event(events, condition):
 
 # create a filter for the latest block and look for the "orderHasBeenPayed" event
 # if event is found, return the hash. Else timeout error
-TIMEOUT = 500
+TIMEOUT = 50
 POLLING_INTERVAL = 2
 def main(condition):
-    event_filter = contract.events.orderHasBeenPayed.create_filter(fromBlock='latest')
+
+    try:
+        event_filter = contract.events.orderHasBeenPayed.create_filter(fromBlock='latest')
+    except:
+        print('Error while creating filter')
+        return False
+    
     i = 0
     while(i<TIMEOUT):
-        events = event_filter.get_new_entries()
-        if events:
-            result = handle_event(events, condition)
-            if(result):
-                return result
-        i+=1
+        try:
+            events = event_filter.get_new_entries()
+            if events:
+                result = handle_event(events, condition)
+                if(result):
+                    return result
+        except:
+            print('Error while reading blockchain')
+            break
+
         sleep(POLLING_INTERVAL)
+        i+=1
+
+    print('Timeout reached')
     return False
 
 if __name__ == "__main__":
