@@ -28,6 +28,7 @@ async def endpoint(stream_id, red, socketio):
             data = json.loads(red.get(stream_id).decode())
             drug = data['drug']
             dosage = data['dosage']
+            proof_of_identity = data['proofOfIdentity']
         except:
             return jsonify('Bad request: missing or invalid stream_id'), 400
         
@@ -38,7 +39,43 @@ async def endpoint(stream_id, red, socketio):
         # fill with doctor and prescription details
         credential_manifest['output_descriptors'][0]['display']['subtitle']['fallback'] = f'A prescription for n.{dosage} of {drug}'
         credential_manifest['output_descriptors'][0]['display']['properties'][0]['fallback'] = doctor
+        print(proof_of_identity)
+        if (proof_of_identity == 'verifiableId'):
+            credential_manifest['presentation_definition']['id'] = str(uuid.uuid4())
+            filter_type = {
+                "path": ["$.type"],
+                "filter": {
+                    "type": "string",
+                    "pattern": "VerifiableId"
+                }
+            }
+            # NOTE: i don't know why on Altme Name=FamilyName and Surname=firstName
+            filter_first_name =  {
+                "path": [
+                    "$.credentialSubject.firstName"
+                ],
+                "filter": {
+                    "type": "string",
+                    "pattern": data["surname"].upper()
+                }
+            }
+            filter_family_name =  {
+                "path": [
+                    "$.credentialSubject.familyName"
+                ],
+                "filter": {
+                    "type": "string",
+                    "pattern": data["name"].upper()
+                }
+            }
 
+            credential_manifest['presentation_definition']['input_descriptors'][0]['constraints']['fields'] = [
+                 filter_type, filter_first_name, filter_family_name
+            ]
+        
+        elif(proof_of_identity == 'none'):
+            credential_manifest['presentation_definition'] = {}
+        
         credential = json.load(open('credentials/Prescription.jsonld', 'r'))
         credential["issuer"] = did
         credential['issuanceDate'] = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
@@ -62,6 +99,7 @@ async def endpoint(stream_id, red, socketio):
             "expires" : (datetime.now() + timedelta(days= 365)).isoformat() + "Z",
             "credential_manifest" : credential_manifest
         }
+        print(credential_offer)
         return jsonify(credential_offer)
 
     else :  #POST
@@ -103,7 +141,6 @@ def generate_credential(red, socketio):
             red.set(f'ws:{stream_id}', json.dumps({'socket_id' : socket_id, 'success' : False}))
 
         form_keys = list(request.form.keys())
-         
         #Load credential to check which values we have to save
         vc_to_issue = request.form['vc']
         try:
@@ -115,6 +152,7 @@ def generate_credential(red, socketio):
 
         #Get values from form
         data = {}
+        data['proofOfIdentity'] = request.form['proofOfIdentity']
         for k in form_keys:
              if(k in prescription_keys):
                   data[k] = request.form[k]

@@ -38,6 +38,14 @@
                     <label for="dosage">Quantity:</label>
                     <input type="number" id="dosage" name="dosage" min="1" value="1">
                 </div>
+
+                <div class="formRow">
+                    <label for="proofOfIdentity">Proof of Identity:</label>
+                    <select name="proofOfIdentity" id="proofOfIdentity" required>
+                      <option value="verifiableId" selected>Verifiable Id</option>
+                      <option value="none">None (TEST ONLY)</option>
+                    </select> 
+                </div>
     
                 <input class="button" type="submit" value="Create prescription">
                 <input type="hidden" name="vc" id="vc" value="Prescription">
