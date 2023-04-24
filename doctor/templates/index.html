@@ -1,22 +1,52 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Doctor</title>
+    <title>Doctor App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter&family=Montserrat:ital,wght@0,700;1,900&family=Roboto:wght@300&family=Rubik+Mono+One&display=swap" rel="stylesheet">
 </head>
 <body>
-    <h1>Generate the prescription</h1>
-    <p>Fill the form with patient and drug details</p>
-    <form action="/generate-credential" method="post">
-        <input type="hidden" name="vc" id="vc" value="Prescription">
-        <label for="name">Name:</label>
-        <input type="text" id="name" name="name"><br><br>
-        <label for="surname">Surname:</label>
-        <input type="text" id="surname" name="surname"><br><br>
-        <label for="drug">Drug:</label>
-        <input type="text" id="drug" name="drug"><br><br>
-        <label for="dosage">Dosage:</label>
-        <input type="number" id="dosage" name="dosage"><br><br>
-        <input type="submit" value="Submit">
-    </form>
+    <div class="header">
+        <i class="fa-solid fa-user-doctor"></i>
+        <p id="doctor">Dr. {{doctor}}</p>
+    </div>
+
+    <div class="main">
+        <div class="formBox">
+            <h1>Generate a prescription</h1>
+            <p>Fill the form with patient and drug details</p>
+            <form action="/generate-credential" method="post">
+                <div class="formRow">
+                    <label for="name">Name:</label>
+                    <input type="text" id="name" name="name">
+                </div>
+    
+                <div class="formRow">
+                    <label for="surname">Surname:</label>
+                    <input type="text" id="surname" name="surname">
+                </div>
+    
+                <div class="formRow">
+                    <label for="drug">Drug:</label>
+                    <input type="text" id="drug" name="drug">
+                </div>
+    
+                <div class="formRow">
+                    <label for="dosage">Quantity:</label>
+                    <input type="number" id="dosage" name="dosage" min="1" value="1">
+                </div>
+    
+                <input class="button" type="submit" value="Create prescription">
+                <input type="hidden" name="vc" id="vc" value="Prescription">
+            </form>
+        </div>
+    </div>
+
+    <div class="footer">VC-4-MED : Proof of Concept</div>
+    <!--JS --> 
+    <script src="https://kit.fontawesome.com/c4ff92cb5e.js" crossorigin="anonymous"></script>
 </body>
 </html>

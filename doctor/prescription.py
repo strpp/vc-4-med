@@ -4,12 +4,13 @@ from datetime import timedelta, datetime
 import json
 import uuid
 import didkit
+import os
 from web3 import Web3
 
 #Keypair generated with DIDkit
 jwk = json.dumps(json.load(open("key.pem", "r")))
 did = 'did:key:z6MkeWr8PVVshiC14dGLUQNrE1Y2AcvfemHHQ1xKivsVB6JX'
-doctor = 'Dr. Mario Rossi'
+doctor = os.getenv('DOCTOR')
 
 REDIS_DATA_TIME_TO_LIVE = 1800
 
@@ -43,7 +44,6 @@ async def endpoint(stream_id, red, socketio):
         credential['issuanceDate'] = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
         credential['expirationDate'] =  (datetime.now() + timedelta(days= 365)).isoformat() + "Z"
         credential['id'] = f'did:example:{stream_id}'
-        # use keccak hash to optimize smart contract
         credential['credentialSubject']['id'] = f'did:example:{uuid.uuid4().hex}'
 
         # fill vc with values stored in redis

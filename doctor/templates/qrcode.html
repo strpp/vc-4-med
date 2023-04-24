@@ -1,13 +1,29 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Doctor</title>
+  <title>Doctor App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="static/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter&family=Montserrat:ital,wght@0,700;1,900&family=Roboto:wght@300&family=Rubik+Mono+One&display=swap" rel="stylesheet">
 </head>
-<body>
-  <h1>Prescription Created</h1>
-  <p> Use your wallet to scan the QRCODE</p>
-  <img src="{{ qrcode(url) }}">
 
+<body>
+  <div class="header">
+    <i class="fa-solid fa-user-doctor"></i>
+    <p id="doctor">Dr. Mario Rossi</p>
+  </div>
+  
+  <div class="formBox">
+    <h1>Prescription successfully created</h1>
+    <p> Use your wallet to scan the QRCODE</p>
+    <img src="{{ qrcode(url) }}">
+  </div>
+  
+  <div class="footer">VC-4-MED : Proof of Concept</div>
+
+  <script src="https://kit.fontawesome.com/c4ff92cb5e.js" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
   <script type="text/javascript" charset="utf-8">
     var socket = io();

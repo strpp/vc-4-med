@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import couchdb
 import redis
 import verifier
+import os
 
 red = redis.Redis(host='localhost', port=6379, db=0)
 couch = couchdb.Server('http://localhost:5984')
