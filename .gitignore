@@ -112,3 +112,5 @@ pharma/key.pem
 build
 node_modules
 examples
+
+.pem
