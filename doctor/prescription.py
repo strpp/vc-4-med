@@ -5,12 +5,19 @@ import json
 import uuid
 import didkit
 import os
-from web3 import Web3
+import web3
 
-#Keypair generated with DIDkit
+doctor = os.getenv('DOCTOR')
+# did:key
 jwk = json.dumps(json.load(open("key.pem", "r")))
 did = 'did:key:z6MkeWr8PVVshiC14dGLUQNrE1Y2AcvfemHHQ1xKivsVB6JX'
-doctor = os.getenv('DOCTOR')
+# did:ethr
+eth_jwk = json.dumps(json.load(open("ethkey.pem", "r")))
+public_key = '0xd661a61c964b8872db826dc854888527c235119f'
+chain_id = '0x13881'
+ethr_did = f'did:ethr:{chain_id}:{public_key}'
+verification_method = f'did:ethr:{chain_id}:{public_key}#controller'
+
 
 REDIS_DATA_TIME_TO_LIVE = 1800
 
@@ -22,6 +29,7 @@ def init_app(app, red, socketio) :
 
 # API to interact with smartphone (wallet)
 async def endpoint(stream_id, red, socketio):
+
     if request.method == 'GET':
         try:
             print(f'Stream ID: {stream_id}')
@@ -34,12 +42,14 @@ async def endpoint(stream_id, red, socketio):
         
         # make an offer  
         credential_manifest = json.load(open('credentials/prescription_credential_manifest.json', 'r'))
-        credential_manifest['issuer']['id'] = did
+
+        # NOTE -> did:key credential_manifest['issuer']['id'] = did
+        credential_manifest['issuer']['id'] = ethr_did
+        
         credential_manifest['output_descriptors'][0]['id'] = f'did:example:{stream_id}'
         # fill with doctor and prescription details
         credential_manifest['output_descriptors'][0]['display']['subtitle']['fallback'] = f'A prescription for n.{dosage} of {drug}'
         credential_manifest['output_descriptors'][0]['display']['properties'][0]['fallback'] = doctor
-        print(proof_of_identity)
         if (proof_of_identity == 'verifiableId'):
             credential_manifest['presentation_definition']['id'] = str(uuid.uuid4())
             filter_type = {
@@ -76,20 +86,19 @@ async def endpoint(stream_id, red, socketio):
         elif(proof_of_identity == 'none'):
             credential_manifest['presentation_definition'] = {}
         
-        credential = json.load(open('credentials/Prescription.jsonld', 'r'))
-        credential["issuer"] = did
+        credential = json.load(open('credentials/PrescriptionNoPersonalInfo.jsonld', 'r'))
+
+        # NOTE -> did:key credential["issuer"] = did = did
+        credential["issuer"] = ethr_did
+        
         credential['issuanceDate'] = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
         credential['expirationDate'] =  (datetime.now() + timedelta(days= 365)).isoformat() + "Z"
         credential['id'] = f'did:example:{stream_id}'
         credential['credentialSubject']['id'] = f'did:example:{uuid.uuid4().hex}'
 
         # fill vc with values stored in redis
-        keys = credential['credentialSubject']['prescription'].keys()
-        for k in keys:
-            try:
-                 credential['credentialSubject']['prescription'][k] = data[k]
-            except:
-                 pass
+        credential['credentialSubject']['drug'] = data['drug']
+        credential['credentialSubject']['quantity'] = data['dosage']
         
         red.set(stream_id, json.dumps({'vc' : credential}))
         
@@ -99,7 +108,6 @@ async def endpoint(stream_id, red, socketio):
             "expires" : (datetime.now() + timedelta(days= 365)).isoformat() + "Z",
             "credential_manifest" : credential_manifest
         }
-        print(credential_offer)
         return jsonify(credential_offer)
 
     else :  #POST
@@ -107,14 +115,21 @@ async def endpoint(stream_id, red, socketio):
         credential = json.loads(red.get(stream_id).decode())['vc']
         socket_id = json.loads(red.get(f'ws:{stream_id}').decode())['socket_id']
 
-        # does not work => didkit.DIDKitException: Missing verification relationship
-        didkit_options = {
-            "proofPurpose": "assertionMethod",
-            "verificationMethod": did,
-        }
-
-        signed_credential =  await didkit.issue_credential(json.dumps(credential), json.dumps({}), jwk)
+        # did:key
+        #signed_credential =  await didkit.issue_credential(json.dumps(credential), json.dumps({}), jwk)
         
+        # did:ethr
+        options = {
+            "proofPurpose" : "assertionMethod",
+            "verificationMethod" : verification_method,
+        }
+        print(credential)
+        signed_credential =  await didkit.issue_credential(
+            json.dumps(credential),
+            options.__str__().replace("'", '"'),
+            eth_jwk
+        )        
+
         if not signed_credential :         # send event to client agent to go forward
             socketio.emit('stream_id', {'stream_id' : stream_id}, to=socket_id)
             return jsonify('Server failed'), 500

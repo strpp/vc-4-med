@@ -60,7 +60,8 @@ async def refund():
             try:
                 verification_method = vc['proof']['verificationMethod']
                 didkit_options = {"proofPurpose": "assertionMethod", "verificationMethod": verification_method}
-                await didkit.verify_credential(json.dumps(vc), json.dumps(didkit_options))
+                verification = await didkit.verify_credential(json.dumps(vc), json.dumps(didkit_options))
+                print(verification)
                 prId_list.append(vc["credentialSubject"]["id"])
                 print(f'{vc["credentialSubject"]["id"]} is ok')
             except:
