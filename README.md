@@ -1,5 +1,6 @@
 # vc-4-med
-SSI flow for the management of medical prescriptions to minimize opportunities for frauds.
+SSI flow for the management of medical prescriptions to minimize opportunities for frauds. <br />
+This repository contains the source code for a project developed under the supervision of Padua university.
 
 ## SETUP
 The system requires:  <br />
