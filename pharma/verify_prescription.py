@@ -1,20 +1,43 @@
 from flask import jsonify, request, render_template, url_for
 from flask_socketio import SocketIO, join_room, leave_room
 from datetime import timedelta, datetime
+from model.issuer import Issuer
+from model.verifier import Verifier
+from model.credential import Credential
 import didkit
 import json
 import uuid
 import os
-import random
 import contract_listener as contract_listener
 import collections.abc
 from web3 import Web3
 
-DID_KEY = os.getenv('DID_KEY')
 MUMBAI_URL = os.getenv('MUMBAI_URL')
 PHARMACY_ADDRESS = os.getenv('PHARMACY_ADDRESS')
-VERIFICATION_METHOD = 'did:key:z6MktaAfLYZF3khaHZuWCho1vrJkDPXx1nkHtPSXFSwk6g5i#z6MktaAfLYZF3khaHZuWCho1vrJkDPXx1nkHtPSXFSwk6g5i'
-jwk = json.dumps(json.load(open("key.pem", "r")))
+
+# did:key
+key_issuer = Issuer(
+    'key',
+    os.getenv('DID_KEY'),
+    json.dumps(json.load(open("key.pem", "r")))
+)
+
+# did:ethr
+ethr_issuer = Issuer(
+    'ethr',
+    f'did:ethr:{PHARMACY_ADDRESS}',
+    json.dumps(json.load(open("ethkey.pem", "r")))
+)
+
+# verifier
+ethr_verifier = Verifier(
+    'ethr',
+    '0x13881'
+) 
+
+# select verifier
+verifier = ethr_verifier
+issuer = ethr_issuer
 
 def init_app(app, red, socketio, couch) : 
     db = couch['vc']
@@ -29,7 +52,6 @@ def init_app(app, red, socketio, couch) :
     app.add_url_rule('/order/wait/<code>',  view_func=wait_order, methods = ['GET'], defaults={"red" : red, "db":db})
     app.add_url_rule('/api/credentials',  view_func=get_credentials, methods = ['GET', 'POST'], defaults={"red" : red, "db": db})
     app.add_url_rule('/insurance',  view_func=insurance, methods = ['GET'])
-    app.add_url_rule('/info',  view_func=verifier_info, methods = ['GET'])
 
     return
 
@@ -62,38 +84,39 @@ async def verify(stream_id, number_of_prescriptions, red, socketio):
     
     else: #POST
         form = request.form
-        presentation = json.loads(form.get('presentation'))
-        verification_method = presentation['proof']['verificationMethod']
+        presentation = form.get('presentation')
         
         try:
-            didkit_options = {"proofPurpose": "assertionMethod","verificationMethod": verification_method}
-            await didkit.verify_presentation(json.dumps(presentation), json.dumps(didkit_options))
-
-            # Check VCs are unique
-            if isinstance(presentation['verifiableCredential'], collections.abc.Sequence): #if there is only one vc, this is not an array
-                ids = []
-                for vc in presentation['verifiableCredential']:
-                    if (vc['credentialSubject']['id']) not in ids:
-                        ids.append(vc['credentialSubject']['id'])
-                    else:
-                        #TODO emit error with socketio
-                        return 'Error: VCs are not unique', 500
-
-            # Redirect client via server push
-            socket_id = json.loads(red.get(stream_id).decode())['socket_id']
-            socketio.emit('stream_id', {'stream_id' : stream_id}, to=socket_id)
-
-            # Save the tokens in the session
-            red.set(stream_id, json.dumps({'stream_id' : stream_id, 'socket_id' : socket_id, 'verified' : True, 'vp' : presentation}))
-
-            # Send ok to wallet
-            return 'Credential verified successfully!', 200
-        
+            result = await verifier.verify_presentation(presentation)
+            if(result == False):
+                return 'Presentation is not valid', 500
+            
         except Exception as e:
             print(e)
             return 'Credential verification failed.', 400
+            
+        if(verifier.are_credentials_unique(presentation) == False):
+            return 'There are duplicate credentials in the presentation', 500
 
+        # Redirect client via server push
+        socket_id = json.loads(red.get(stream_id).decode())['socket_id']
+        socketio.emit('stream_id', {'stream_id' : stream_id}, to=socket_id)
 
+        # Save the tokens in the session
+        try:
+            red.set(stream_id, json.dumps({
+                'stream_id' : stream_id, 
+                'socket_id' : socket_id, 
+                'vp' : json.loads(presentation)
+            }))
+        except Exception as e:
+            print(e)
+            # TODO : signal to socket error while writing to redis
+            return 200
+        
+        # Send ok to wallet
+        return 'Credential verified successfully!', 200
+        
 def callback(stream_id, red):
     vcs = []
     result = json.loads(red.get(stream_id).decode())['vp']['verifiableCredential']
@@ -179,21 +202,17 @@ async def wait_order(code, red, db):
 
     # Get data from Redis (prescription_id, quantity, socket_id)
     vp = json.loads(red.get(stream_id).decode())['vp']
-    #prescription_id = vp['verifiableCredential']['credentialSubject']['id']
-    
-    # Issue new credential (Prescription + Proof of payment)
-    receipt = json.load(open('credentials/Receipt.jsonld', 'r'))
-    receipt["issuer"] = DID_KEY
-    receipt['issuanceDate'] = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
-    receipt['expirationDate'] =  (datetime.now() + timedelta(days= 365)).isoformat() + "Z"
-    receipt['id'] = f'did:example:{order_id}'
-    receipt['credentialSubject']['receipt']['vp'] = vp
-    receipt['credentialSubject']['receipt']['proofOfPayment'] = tx
 
-    try:
-        signed_receipt =  await didkit.issue_credential(json.dumps(receipt), json.dumps({}), jwk)
-    except:
-        return 'Error while signing the order receipt', 500
+    # Issue new credential (Prescription + Proof of payment)
+    schema = json.load(open('credentials/Receipt.jsonld', 'r'))
+    receipt = Credential(schema)
+    receipt.change_value("invoice", {
+            "description": vp,
+            "confirmationNumber": tx
+    })
+    receipt.set_id(f'did:example:{order_id}')
+
+    signed_receipt = await issuer.issue_credential(receipt)
 
     # Save credential on couchDB
     db.save(json.loads(signed_receipt))    
@@ -230,12 +249,7 @@ async def get_credentials(red, db):
                 "verifiableCredential": [vc],
             }
         try:
-            vp = await didkit.issue_presentation(
-                json.dumps(vp),
-                # TODO 
-                json.dumps({'verificationMethod': VERIFICATION_METHOD}), 
-                jwk
-            )
+            vp = await issuer.issue_presentation(vp)
         except:
             return 'Internal server error', 500
 
@@ -245,10 +259,6 @@ async def get_credentials(red, db):
 
 def insurance():
     return render_template('insurance.html')
-
-def verifier_info():
-    info = {'DID_KEY' : DID_KEY, 'VERIFICATION_METHOD' : VERIFICATION_METHOD}
-    return jsonify(info)
 
 
 

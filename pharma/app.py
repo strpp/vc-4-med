@@ -6,7 +6,7 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 import couchdb
 import redis
-import verifier
+import verify_prescription
 import os
 
 red = redis.Redis(host='localhost', port=6379, db=0)
@@ -19,7 +19,7 @@ app.secret_key = 'mysecretkey' # set the secret key for sessions
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 socketio = SocketIO(app)
-verifier.init_app(app, red, socketio, couch)
+verify_prescription.init_app(app, red, socketio, couch)
 
 Session(app)
 QRcode(app)

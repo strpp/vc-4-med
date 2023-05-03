@@ -114,3 +114,4 @@ node_modules
 examples
 
 *.pem
+*.pyc
