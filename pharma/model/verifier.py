@@ -9,11 +9,10 @@ class Verifier():
     
     def get_options_from(self, json_file):
         json_file = json.loads(json_file)
-
         if('proof' not in json_file.keys()):
             raise ValueError('Presentation or Credential is not signed')
         
-        if(('verificationMethod' not in json_file['proof'].keys()) or ('proofPurpose' not in json_file['proof'].keys())):
+        if('verificationMethod' not in json_file['proof'].keys()):
             raise ValueError('Missing parameters in Proof')
         
         verification_method = json_file['proof']['verificationMethod']

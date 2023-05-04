@@ -16,6 +16,6 @@ class Issuer:
         return signed_credential
     
     async def issue_presentation(self, presentation):
-        options = {"verificationMethod": f'{self.did}#controller'}
-        signed_presentation = await didkit.issue_credential(json.dumps(presentation), json.dumps(options), self.jwk)
+        options = {"verificationMethod": f'{self.did}#controller', 'proofPurpose' : 'authentication'}
+        signed_presentation = await didkit.issue_presentation(json.dumps(presentation), json.dumps(options), self.jwk)
         return signed_presentation

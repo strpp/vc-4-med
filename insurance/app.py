@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_session import Session
 from flask_cors import CORS
 from dotenv import load_dotenv
+from model.verifier import Verifier
 import didkit
 import json
 import collections.abc
@@ -13,6 +14,7 @@ app.secret_key = 'mysecretkey' # set the secret key for sessions
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 
+verifier = Verifier('ethr','0x13881')
 
 @app.route('/')
 def index():
@@ -27,23 +29,15 @@ async def refund():
 
     for vp in vps:
         # Check Receipt presentation
-        try:
-            verification_method = json.loads(vp)['proof']['verificationMethod']
-            didkit_options = {"proofPurpose": "assertionMethod", "verificationMethod": verification_method}
-            await didkit.verify_presentation(vp, json.dumps(didkit_options))
-        except:
-            print('Failed receipt check')
-            return 'Internal Server Error', 500
-        # Check Prescription presentation
-        try:
-            prescription = json.loads(vp)['verifiableCredential'][0]['credentialSubject']['invoice']['description']
-            verification_method = prescription['proof']['verificationMethod']
-            didkit_options = {"proofPurpose": "assertionMethod", "verificationMethod": verification_method}
-            await didkit.verify_presentation(json.dumps(prescription), json.dumps(didkit_options))
-        except Exception as e: 
-            print('Failed prescription presentation check')
-            print(e)
-            return 'Internal Server Error', 500
+        result = await verifier.verify_presentation(vp)
+        if(result == False):
+            return 'Invalid invoice', 500
+        
+        
+        prescription = json.loads(vp)['verifiableCredential'][0]['credentialSubject']['invoice']['description']
+        result = await verifier.verify_presentation(json.dumps(prescription))
+        if(result == False):
+            return 'Invalid Prescription Presentation', 500
         
         # Check Prescription credential
         vc_list = []
@@ -57,16 +51,10 @@ async def refund():
             vc_list.append(data)
 
         for vc in vc_list:
-            try:
-                verification_method = vc['proof']['verificationMethod']
-                didkit_options = {"proofPurpose": "assertionMethod", "verificationMethod": verification_method}
-                verification = await didkit.verify_credential(json.dumps(vc), json.dumps(didkit_options))
-                print(verification)
-                prId_list.append(vc["credentialSubject"]["id"])
-                print(f'{vc["credentialSubject"]["id"]} is ok')
-            except:
-                print('Failed prescription credential check')
-                return 'Internal Server Error', 500
+            result = await verifier.verify_credential(json.dumps(vc))
+            if(result == False):
+                return 'Invalid Prescription Credential', 500
+            prId_list.append(vc["credentialSubject"]["id"])
 
         # read blockchain to get order related to receipt
         try: 

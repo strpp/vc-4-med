@@ -1,4 +1,5 @@
 import uuid
+from model.prescription import Prescription
 
 class Order:
     def __init__(self, prescriptions, pharmacy_address):
@@ -25,4 +26,15 @@ class Order:
             'pharmacy' : self.pharmacy
         }
         return jsonOrder
+    
+    def load_prescriptions_from_json(self, prescriptions):
+        self.prescriptions = []
+        for p in prescriptions:
+            o = Prescription(p['prId'], p['maxQuantity'], p['price'], p['drug'])
+            try:
+                o.set_quantity(p['quantity'])
+            except:
+                pass
+            self.prescriptions.append(o)
+        self.totalPrice = self.compute_total_price()
         

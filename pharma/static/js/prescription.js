@@ -1,21 +1,21 @@
-var vcs = JSON.parse(vcs.replace(/&#39;/g,'"').replace('True', 'true'))['vcs']
-
+var prescriptions = JSON.parse(prescriptions.replace(/&#39;/g,'"'))
 //  Create form
 const form = document.createElement("form");
 form.setAttribute("id", "orderForm")
 
-for(let i=0; i<vcs.length;i++){
-  let drug = vcs[i].credentialSubject.drug
-  let quantity =  vcs[i].credentialSubject.quantity
+for(let i=0; i<prescriptions.length;i++){
+  let id = prescriptions[i].prId
+  let maxQuantity =  prescriptions[i].maxQuantity
+  let drug = prescriptions[i].drug
   let label = document.createElement("label");
-  label.setAttribute("for", drug);
-  label.innerHTML = `<strong>${drug}</strong> (Max quantity: ${quantity})`
+  label.setAttribute("for", id);
+  label.innerHTML = `<strong>${drug}</strong> (Max quantity: ${maxQuantity})`
   let input = document.createElement("input")
   input.setAttribute("type", "number")
   input.setAttribute("min", "1")
   input.setAttribute("value", "1")
-  input.setAttribute("max", quantity)
-  input.setAttribute("id", drug)
+  input.setAttribute("max", maxQuantity)
+  input.setAttribute("id", id)
   form.appendChild(label)
   form.appendChild(document.createElement('br'))
   form.appendChild(input)

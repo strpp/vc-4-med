@@ -12,11 +12,10 @@ class Issuer:
         options = {}
         if (self.did_method == 'ethr'):
             options = {"proofPurpose": "assertionMethod", "verificationMethod": f'{self.did}#controller'}
-        print(credential.stringify())
         signed_credential = await didkit.issue_credential(credential.stringify(), json.dumps(options), self.jwk)
         return signed_credential
     
     async def issue_presentation(self, presentation):
-        options = {"verificationMethod": f'{self.did}#controller'}
+        options = {"verificationMethod": f'{self.did}#controller', 'proofPurpose' : 'authentication'}
         signed_presentation = await didkit.issue_presentation(json.dumps(presentation), json.dumps(options), self.jwk)
         return signed_presentation

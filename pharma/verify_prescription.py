@@ -119,40 +119,34 @@ async def verify(stream_id, number_of_prescriptions, red, socketio):
         return 'Credential verified successfully!', 200
         
 def callback(stream_id, red):
-    vcs = []
-    result = json.loads(red.get(stream_id).decode())['vp']['verifiableCredential']
+    json_prescriptions = []
+    prescriptions = []
+    data = json.loads(red.get(stream_id).decode())['vp']['verifiableCredential']
     # if we have multiple vcs, just save the array
-    if isinstance(result, collections.abc.Sequence):
-        vcs = result
+    if isinstance(data, collections.abc.Sequence):
+        json_prescriptions = data
     # if vc is single, create an array
     else:
-        vcs.append(result)
+        json_prescriptions.append(data)
+    
+    for p in json_prescriptions:
+        drug = p['credentialSubject']['drug']
+        max_quantity = int(p['credentialSubject']['quantity'])
+        id = p['credentialSubject']['id']
+        price = 1
+        prescriptions.append( Prescription(id, max_quantity, price, drug).__dict__)
 
-    return render_template('prescription.html', vcs={'vcs': vcs}, stream_id=stream_id)
+    red.set(f'pr:{stream_id}', json.dumps({'prescriptions' : prescriptions}))
+    return render_template('prescription.html', prescriptions=prescriptions, stream_id=stream_id)
 
 # Handle request for creating a new order from pharmacy
 def create_order(stream_id, red, socketio):
 
-    prescriptions = json.loads(red.get(stream_id).decode())['vp']['verifiableCredential']
-    prescription_list = []
-
-    if isinstance(prescriptions, collections.abc.Sequence):
-        for p in prescriptions:
-            quantity = int(request.form.get(p['credentialSubject']['drug']))
-            max_quantity = int(p['credentialSubject']['quantity'])
-            prescription_list.append(
-                Prescription(p['credentialSubject']['id'],quantity,max_quantity,1)
-            )
-            
-    else: 
-        p = prescriptions # it is just one so it is not an array in the verifiable credential
-        quantity = int(request.form.get(prescriptions['credentialSubject']['drug']))
-        max_quantity = int(p['credentialSubject']['quantity'])
-        prescription_list.append(
-            Prescription(p['credentialSubject']['id'],quantity, max_quantity,1)
-        )
-
-    order = Order(prescription_list, PHARMACY_ADDRESS)
+    prescriptions = json.loads(red.get(f'pr:{stream_id}').decode())['prescriptions']
+    for p in prescriptions:
+            p['quantity'] = int(request.form.get(p['prId']))
+    order = Order([], PHARMACY_ADDRESS)
+    order.load_prescriptions_from_json(prescriptions)
     red.set(order.orderId, json.dumps({'order' : order.serialize(), 'stream_id' : stream_id, 'signed_order' : 'null'}))
     return order.serialize()
 
