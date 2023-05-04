@@ -43,6 +43,7 @@ window.addEventListener("load", () => {
 
     // Define what happens on successful data submission
     XHR.addEventListener("load", async (event) => {
+      console.log(event.target.responseText)
       const order = JSON.parse(event.target.responseText)
       const orderId = order['orderId']
       await signOrder(order);

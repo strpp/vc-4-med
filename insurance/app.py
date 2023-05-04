@@ -36,7 +36,7 @@ async def refund():
             return 'Internal Server Error', 500
         # Check Prescription presentation
         try:
-            prescription = json.loads(vp)['verifiableCredential'][0]['credentialSubject']['receipt']['vp']
+            prescription = json.loads(vp)['verifiableCredential'][0]['credentialSubject']['invoice']['description']
             verification_method = prescription['proof']['verificationMethod']
             didkit_options = {"proofPurpose": "assertionMethod", "verificationMethod": verification_method}
             await didkit.verify_presentation(json.dumps(prescription), json.dumps(didkit_options))
@@ -48,7 +48,7 @@ async def refund():
         # Check Prescription credential
         vc_list = []
         prId_list = []
-        data = json.loads(vp)['verifiableCredential'][0]['credentialSubject']['receipt']['vp']['verifiableCredential']
+        data = json.loads(vp)['verifiableCredential'][0]['credentialSubject']['invoice']['description']['verifiableCredential']
         
         # if we have only one vc, this is not an array so we have to check and in case is not, build one
         if isinstance(data, collections.abc.Sequence):
@@ -70,7 +70,7 @@ async def refund():
 
         # read blockchain to get order related to receipt
         try: 
-            tx = json.loads(vp)['verifiableCredential'][0]['credentialSubject']['receipt']['proofOfPayment']
+            tx = json.loads(vp)['verifiableCredential'][0]['credentialSubject']['invoice']['confirmationNumber']
             params = blockchain_reader.decode(tx)
             order = params['order']
         except:

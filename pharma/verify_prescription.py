@@ -4,6 +4,9 @@ from datetime import timedelta, datetime
 from model.issuer import Issuer
 from model.verifier import Verifier
 from model.credential import Credential
+from model.credential_request import Credential_Request
+from model.prescription import Prescription
+from model.order import Order
 import didkit
 import json
 import uuid
@@ -45,7 +48,7 @@ def init_app(app, red, socketio, couch) :
     app.add_url_rule('/verify/<stream_id>/<number_of_prescriptions>',  view_func=verify, methods = ['GET','POST'], defaults={"red" : red, "socketio" : socketio})
     app.add_url_rule('/callback/<stream_id>',  view_func=callback, methods = ['GET','POST'], defaults={"red" : red})
     app.add_url_rule('/success/<tx>',  view_func=success, methods = ['GET','POST'], defaults={"red" : red})
-    app.add_url_rule('/order/<stream_id>',  view_func=order, methods = ['POST'], defaults={"red" : red, "socketio" : socketio})
+    app.add_url_rule('/order/<stream_id>',  view_func=create_order, methods = ['POST'], defaults={"red" : red, "socketio" : socketio})
     app.add_url_rule('/order/sign/<order_id>',  view_func=receive_sign, methods = ['POST'], defaults={"red" : red})
     app.add_url_rule('/order/qr/<code>',  view_func=create_qr_order, methods = ['GET'])
     app.add_url_rule('/order/pay/<code>',  view_func=pay_order, methods = ['GET','POST'], defaults={"red" : red})
@@ -76,11 +79,9 @@ def authorize(red, socketio):
 async def verify(stream_id, number_of_prescriptions, red, socketio):
 
     if request.method == 'GET':
-        presentation_request = json.load(open('credentials/vp_request.json', 'r'))
-        for i in range(1, int(number_of_prescriptions)+1):
-            presentation_request['query'][0]['credentialQuery'].append({"example": {"type": "MedicalPrescriptionCredential"}})
-        presentation_request['challenge'] = str(uuid.uuid4())
-        return jsonify(presentation_request)
+        request_schema = json.load(open('credentials/CredentialRequest.json', 'r'))
+        request_credential = Credential_Request(request_schema, 'MedicalPrescriptionCredential', int(number_of_prescriptions))
+        return request_credential.stringify()
     
     else: #POST
         form = request.form
@@ -130,50 +131,30 @@ def callback(stream_id, red):
     return render_template('prescription.html', vcs={'vcs': vcs}, stream_id=stream_id)
 
 # Handle request for creating a new order from pharmacy
-def order(stream_id, red, socketio):
+def create_order(stream_id, red, socketio):
 
     prescriptions = json.loads(red.get(stream_id).decode())['vp']['verifiableCredential']
-    prs = []
-    total_price = 0
+    prescription_list = []
 
     if isinstance(prescriptions, collections.abc.Sequence):
-        # get prescriptions
         for p in prescriptions:
             quantity = int(request.form.get(p['credentialSubject']['drug']))
-            if quantity > 0 :
-                price = 1 # TODO: just a mockup
-                prescription = {
-                    "prId" : p['credentialSubject']['id'],
-                    "quantity" : quantity,
-                    "maxQuantity" : p['credentialSubject']['quantity'],
-                    "price" : price
-                }
-                prs.append(prescription)
-                total_price+=(price*quantity)
-    else: #just one prescription
-        quantity = int(request.form.get(prescriptions['credentialSubject']['drug']))
-        if ( quantity > 0):
-            price = 1 # TODO: just a mockup
-            prs.append(
-                {
-                    "prId" : prescriptions['credentialSubject']['id'],
-                    "quantity" : quantity,
-                    "maxQuantity" : prescriptions['credentialSubject']['quantity'],
-                    "price" : price
-                }
+            max_quantity = int(p['credentialSubject']['quantity'])
+            prescription_list.append(
+                Prescription(p['credentialSubject']['id'],quantity,max_quantity,1)
             )
-            total_price=(price*quantity)
-    
-    # create JSON order to be signed
-    order_id = uuid.uuid4().hex
-    order = {
-        "prescriptions" : prs,
-        "orderId" : order_id,
-        "totalPrice" : total_price,
-        "pharmacy" : PHARMACY_ADDRESS
-    }
-    red.set(order_id, json.dumps({'order' : order, 'stream_id' : stream_id, 'signed_order' : 'null'}))
-    return order
+            
+    else: 
+        p = prescriptions # it is just one so it is not an array in the verifiable credential
+        quantity = int(request.form.get(prescriptions['credentialSubject']['drug']))
+        max_quantity = int(p['credentialSubject']['quantity'])
+        prescription_list.append(
+            Prescription(p['credentialSubject']['id'],quantity, max_quantity,1)
+        )
+
+    order = Order(prescription_list, PHARMACY_ADDRESS)
+    red.set(order.orderId, json.dumps({'order' : order.serialize(), 'stream_id' : stream_id, 'signed_order' : 'null'}))
+    return order.serialize()
 
 # Receive order signed by pharmacy, store it on Redis and redirect to QRCode to make user able to pay with SC
 def receive_sign(order_id, red):
@@ -206,7 +187,7 @@ async def wait_order(code, red, db):
     # Issue new credential (Prescription + Proof of payment)
     schema = json.load(open('credentials/Receipt.jsonld', 'r'))
     receipt = Credential(schema)
-    receipt.change_value("invoice", {
+    receipt.set_value("invoice", {
             "description": vp,
             "confirmationNumber": tx
     })
@@ -248,9 +229,11 @@ async def get_credentials(red, db):
                 "type": ["VerifiablePresentation"],
                 "verifiableCredential": [vc],
             }
+        print(vp)
         try:
             vp = await issuer.issue_presentation(vp)
-        except:
+        except Exception as e:
+            print(e)
             return 'Internal server error', 500
 
         result_set.append(vp)

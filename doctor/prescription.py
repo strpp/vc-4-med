@@ -1,22 +1,32 @@
 from flask import jsonify, request, render_template, url_for
 from flask_socketio import SocketIO, join_room, leave_room
 from datetime import timedelta, datetime
+from model.issuer import Issuer
+from model.credential import Credential
+from model.credential_manifest import Credential_Manifest
 import json
 import uuid
 import didkit
 import os
-import web3
 
 doctor = os.getenv('DOCTOR')
 # did:key
-jwk = json.dumps(json.load(open("key.pem", "r")))
-did = 'did:key:z6MkeWr8PVVshiC14dGLUQNrE1Y2AcvfemHHQ1xKivsVB6JX'
+key_issuer = Issuer(
+    'key', 
+    'did:key:z6MkeWr8PVVshiC14dGLUQNrE1Y2AcvfemHHQ1xKivsVB6JX', 
+    json.dumps(json.load(open("key.pem", "r")))
+)
 # did:ethr
-eth_jwk = json.dumps(json.load(open("ethkey.pem", "r")))
 public_key = '0xd661a61c964b8872db826dc854888527c235119f'
 chain_id = '0x13881'
-ethr_did = f'did:ethr:{chain_id}:{public_key}'
-verification_method = f'did:ethr:{chain_id}:{public_key}#controller'
+ethr_issuer = Issuer(
+    'ethr',
+    f'did:ethr:{chain_id}:{public_key}',
+    json.dumps(json.load(open("ethkey.pem", "r")))
+)
+
+# select
+issuer = ethr_issuer
 
 
 REDIS_DATA_TIME_TO_LIVE = 1800
@@ -41,96 +51,45 @@ async def endpoint(stream_id, red, socketio):
             return jsonify('Bad request: missing or invalid stream_id'), 400
         
         # make an offer  
-        credential_manifest = json.load(open('credentials/prescription_credential_manifest.json', 'r'))
+        credential_manifest = Credential_Manifest(f'did:example:{stream_id}')
+        credential_manifest.set_description(f'A prescription for n.{dosage} of {drug}')
+        credential_manifest.set_doctor(doctor)
 
-        # NOTE -> did:key credential_manifest['issuer']['id'] = did
-        credential_manifest['issuer']['id'] = ethr_did
-        
-        credential_manifest['output_descriptors'][0]['id'] = f'did:example:{stream_id}'
-        # fill with doctor and prescription details
-        credential_manifest['output_descriptors'][0]['display']['subtitle']['fallback'] = f'A prescription for n.{dosage} of {drug}'
-        credential_manifest['output_descriptors'][0]['display']['properties'][0]['fallback'] = doctor
         if (proof_of_identity == 'verifiableId'):
-            credential_manifest['presentation_definition']['id'] = str(uuid.uuid4())
-            filter_type = {
-                "path": ["$.type"],
-                "filter": {
-                    "type": "string",
-                    "pattern": "VerifiableId"
-                }
-            }
-            # NOTE: i don't know why on Altme Name=FamilyName and Surname=firstName
-            filter_first_name =  {
-                "path": [
-                    "$.credentialSubject.firstName"
-                ],
-                "filter": {
-                    "type": "string",
-                    "pattern": data["surname"].upper()
-                }
-            }
-            filter_family_name =  {
-                "path": [
-                    "$.credentialSubject.familyName"
-                ],
-                "filter": {
-                    "type": "string",
-                    "pattern": data["name"].upper()
-                }
-            }
+            print(data["name"])
+            credential_manifest.add_proof_of_identity(data["name"], data["surname"])
 
-            credential_manifest['presentation_definition']['input_descriptors'][0]['constraints']['fields'] = [
-                 filter_type, filter_first_name, filter_family_name
-            ]
-        
-        elif(proof_of_identity == 'none'):
-            credential_manifest['presentation_definition'] = {}
-        
-        credential = json.load(open('credentials/PrescriptionNoPersonalInfo.jsonld', 'r'))
-
-        # NOTE -> did:key credential["issuer"] = did = did
-        credential["issuer"] = ethr_did
-        
-        credential['issuanceDate'] = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
-        credential['expirationDate'] =  (datetime.now() + timedelta(days= 365)).isoformat() + "Z"
-        credential['id'] = f'did:example:{stream_id}'
-        credential['credentialSubject']['id'] = f'did:example:{uuid.uuid4().hex}'
-
+        # generate credential        
+        schema = json.load(open('credentials/PrescriptionNoPersonalInfo.jsonld', 'r'))
+        credential = Credential(schema)
+        credential.set_id(f'did:example:{stream_id}')
         # fill vc with values stored in redis
-        credential['credentialSubject']['drug'] = data['drug']
-        credential['credentialSubject']['quantity'] = data['dosage']
+        try:
+            credential.set_value('drug', data['drug'])
+            credential.set_value('quantity', data['dosage'])
+        except ValueError as ve:
+            print('Invalid data for credential')
+            return 500
         
-        red.set(stream_id, json.dumps({'vc' : credential}))
+        red.set(stream_id, json.dumps({'vc' : credential.schema}))
         
         credential_offer = {
             "type": "CredentialOffer",
-            "credentialPreview": credential,
+            "credentialPreview": credential.schema,
             "expires" : (datetime.now() + timedelta(days= 365)).isoformat() + "Z",
-            "credential_manifest" : credential_manifest
+            "credential_manifest" : credential_manifest.schema
         }
         return jsonify(credential_offer)
 
     else :  #POST
 
-        credential = json.loads(red.get(stream_id).decode())['vc']
+        schema = json.loads(red.get(stream_id).decode())['vc']
+        credential = Credential(schema)
         socket_id = json.loads(red.get(f'ws:{stream_id}').decode())['socket_id']
 
-        # did:key
-        #signed_credential =  await didkit.issue_credential(json.dumps(credential), json.dumps({}), jwk)
-        
-        # did:ethr
-        options = {
-            "proofPurpose" : "assertionMethod",
-            "verificationMethod" : verification_method,
-        }
-        print(credential)
-        signed_credential =  await didkit.issue_credential(
-            json.dumps(credential),
-            options.__str__().replace("'", '"'),
-            eth_jwk
-        )        
-
-        if not signed_credential :         # send event to client agent to go forward
+        try:
+            signed_credential =  await issuer.issue_credential(credential) 
+        except:
             socketio.emit('stream_id', {'stream_id' : stream_id}, to=socket_id)
             return jsonify('Server failed'), 500
         
@@ -155,22 +114,18 @@ def generate_credential(red, socketio):
             print(f'socket_id : {socket_id}, stream_id : {stream_id}')
             red.set(f'ws:{stream_id}', json.dumps({'socket_id' : socket_id, 'success' : False}))
 
-        form_keys = list(request.form.keys())
-        #Load credential to check which values we have to save
-        vc_to_issue = request.form['vc']
-        try:
-            vc = json.load(open(f'credentials/{vc_to_issue}.jsonld', 'r'))
-            prescription = vc['credentialSubject']['prescription']
-            prescription_keys = prescription.keys()
-        except:
-             return jsonify('Bad request'), 400
-
         #Get values from form
-        data = {}
-        data['proofOfIdentity'] = request.form['proofOfIdentity']
-        for k in form_keys:
-             if(k in prescription_keys):
-                  data[k] = request.form[k]
+        try:
+            data = {
+                'proofOfIdentity' : request.form['proofOfIdentity'],
+                'name' : request.form['name'],
+                'surname' : request.form['surname'],
+                'drug' : request.form['drug'],
+                'dosage' : request.form['dosage']
+            }
+        except:
+            print('Missing value(s) for building credential')
+            return 500
         
         #Save on Redis using stream_id as key
         red.set(stream_id, json.dumps(data))

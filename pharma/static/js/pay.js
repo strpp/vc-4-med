@@ -24,8 +24,8 @@ async function pay(){
         //alert(`Payment successfully executed with TX /${tx.transactionHash}`)
         window.location.href = `/success/${tx.transactionHash}`;
     }catch(e){
+        console.log(e)
         const errorJson = e.message.substring(e.message.indexOf('{'), e.message.lastIndexOf("'"))
-        console.log(errorJson)
         const tx = JSON.parse(errorJson)['value']['data']['data']
         const txNumber = Object.keys(tx)[0];
         const error = tx[txNumber]['reason']
