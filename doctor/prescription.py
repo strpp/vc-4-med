@@ -1,44 +1,46 @@
 from flask import jsonify, request, render_template, url_for
-from flask_socketio import SocketIO, join_room, leave_room
+from flask_socketio import join_room, leave_room
 from datetime import timedelta, datetime
 from model.issuer import Issuer
 from model.credential import Credential
 from model.credential_manifest import Credential_Manifest
 import json
 import uuid
-import didkit
 import os
 
 doctor = os.getenv('DOCTOR')
-# did:key
-key_issuer = Issuer(
-    'key', 
-    'did:key:z6MkeWr8PVVshiC14dGLUQNrE1Y2AcvfemHHQ1xKivsVB6JX', 
-    json.dumps(json.load(open("key.pem", "r")))
-)
-# did:ethr
-public_key = '0xd661a61c964b8872db826dc854888527c235119f'
-chain_id = '0x13881'
-ethr_issuer = Issuer(
-    'ethr',
-    f'did:ethr:{chain_id}:{public_key}',
-    json.dumps(json.load(open("ethkey.pem", "r")))
-)
-
-# select
-issuer = ethr_issuer
-
-
 REDIS_DATA_TIME_TO_LIVE = 1800
 
 def init_app(app, red, socketio) :
-    app.add_url_rule('/endpoint/<stream_id>',  view_func=endpoint, methods = ['GET', 'POST'], defaults={"red" : red, "socketio" : socketio})
+
+    # Setup SSI model
+    if(app.config['DID_METHOD']=='did:ethr'):
+        issuer = Issuer(
+            'ethr',
+            f'did:ethr:{app.config["DOCTOR_PUBLIC_KEY"]}',
+            json.dumps(json.load(open("ethkey.pem", "r")))
+        )    
+    elif((app.config['DID_METHOD']=='did:key')):
+        issuer = Issuer(
+        'key',
+        app.config['DID_KEY'],
+        json.dumps(json.load(open("key.pem", "r")))
+    )  
+    else:
+        raise ValueError('did:method is not supported')
+
+    app.add_url_rule('/endpoint/<stream_id>',
+                     view_func=endpoint, 
+                     methods = ['GET', 'POST'], 
+                     defaults={"red" : red, "socketio" : socketio, "issuer" : issuer}
+    )
+
     app.add_url_rule('/callback/<stream_id>',  view_func=callback, methods = ['GET', 'POST'], defaults={"red" : red})
     app.add_url_rule('/generate-credential',  view_func=generate_credential, methods = ['POST'], defaults={"red" : red, "socketio" : socketio})
     return
 
 # API to interact with smartphone (wallet)
-async def endpoint(stream_id, red, socketio):
+async def endpoint(stream_id, red, socketio, issuer):
 
     if request.method == 'GET':
         try:

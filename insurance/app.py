@@ -1,8 +1,7 @@
 from flask import Flask, request, jsonify
-from flask_session import Session
 from flask_cors import CORS
-from dotenv import load_dotenv
 from model.verifier import Verifier
+from model.registry import Registry
 import didkit
 import json
 import collections.abc
@@ -10,11 +9,17 @@ import blockchain_reader
 
 app = Flask(__name__)
 CORS(app)
-app.secret_key = 'mysecretkey' # set the secret key for sessions
-app.config["SESSION_PERMANENT"] = False
-app.config["SESSION_TYPE"] = "filesystem"
 
-verifier = Verifier('ethr','0x13881')
+app.config.from_pyfile('config.py')
+
+registry = Registry(
+    app.config['RPC_URL'],
+    app.config['REGISTRY_ADDRESS'],
+    app.config['DOCTOR_IDENTITY'],
+    app.config['PHARMACY_IDENTITY']
+)
+
+verifier = Verifier(registry)
 
 @app.route('/')
 def index():
@@ -29,13 +34,13 @@ async def refund():
 
     for vp in vps:
         # Check Receipt presentation
-        result = await verifier.verify_presentation(vp)
+        result = await verifier.verify_presentation(vp, 'MedicalReceiptCredential')
         if(result == False):
             return 'Invalid invoice', 500
         
         
         prescription = json.loads(vp)['verifiableCredential'][0]['credentialSubject']['invoice']['description']
-        result = await verifier.verify_presentation(json.dumps(prescription))
+        result = await verifier.verify_presentation(json.dumps(prescription), 'MedicalPrescriptionCredential')
         if(result == False):
             return 'Invalid Prescription Presentation', 500
         
@@ -51,9 +56,12 @@ async def refund():
             vc_list.append(data)
 
         for vc in vc_list:
-            result = await verifier.verify_credential(json.dumps(vc))
+            print(vc)
+            """
+            result = await verifier.verify_credential(json.dumps(vc), 'MedicalPrescriptionCredential')
             if(result == False):
                 return 'Invalid Prescription Credential', 500
+            """
             prId_list.append(vc["credentialSubject"]["id"])
 
         # read blockchain to get order related to receipt

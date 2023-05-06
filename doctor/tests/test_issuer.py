@@ -97,7 +97,7 @@ async def test_verifying():
 @pytest.mark.asyncio
 async def test_mumbai():
     jwk = json.dumps(json.load(open("ethkey.pem", "r")))
-    public_key = '0xd661a61c964b8872db826dc854888527c235119f'
+    public_key = '0x5D00c7A06f6fE6aC36B0347C8E5536c799E492b2'
     chain_id = '0x13881'
     did = f'did:ethr:{chain_id}:{public_key}'
     verification_method = f'did:ethr:{chain_id}:{public_key}#controller'

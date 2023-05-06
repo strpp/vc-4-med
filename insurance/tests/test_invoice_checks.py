@@ -1,9 +1,14 @@
 # python -m pytest tests/
 
 from model.verifier import Verifier
+from model.registry import Registry
+from dotenv import load_dotenv
+import os
 import json
 import didkit
 import pytest
+
+load_dotenv()
 
 @pytest.mark.asyncio
 async def test_prescription_presentation():
@@ -41,9 +46,16 @@ async def test_prescription_presentation():
 						}
 					}
     vp = json.dumps(vp)
-    verifier = Verifier('ethr','0x13881')
 
-    result = await verifier.verify_presentation(vp)
+    registry = Registry(
+        os.getenv('MUMBAI_URL'),
+        '0xdCa7EF03e98e0DC2B855bE647C39ABe984fcF21B',
+        '0x5D00c7A06f6fE6aC36B0347C8E5536c799E492b2',
+        '0x2e3D6752536566ED51c805A86070BA596052FCb6'
+    )
+    verifier = Verifier(registry)
+
+    result = await verifier.verify_presentation(vp, 'MedicalPrescriptionCredential')
     assert result == True
     
 @pytest.mark.asyncio
@@ -93,7 +105,25 @@ async def test_invoice_presentation():
 }
 
     vp = json.dumps(vp)
-    verifier = Verifier('ethr','0x13881')
+    registry = Registry(
+        os.getenv('MUMBAI_URL'),
+        '0xdCa7EF03e98e0DC2B855bE647C39ABe984fcF21B',
+        '0x5D00c7A06f6fE6aC36B0347C8E5536c799E492b2',
+        '0x2e3D6752536566ED51c805A86070BA596052FCb6'
+    )
+    verifier = Verifier(registry)
 
-    result = await verifier.verify_presentation(vp)
+    result = await verifier.verify_presentation(vp, 'MedicalPrescriptionReceipt')
+    assert result == True
+
+@pytest.mark.asyncio
+async def test_pharmacy_id():
+
+    registry = Registry(
+        os.getenv('MUMBAI_URL'),
+        '0xdCa7EF03e98e0DC2B855bE647C39ABe984fcF21B',
+        '0x5D00c7A06f6fE6aC36B0347C8E5536c799E492b2',
+        '0x2e3D6752536566ED51c805A86070BA596052FCb6'
+    )
+    result = await registry.is_pharmacy('0x2e3D6752536566ED51c805A86070BA596052FCb6')
     assert result == True

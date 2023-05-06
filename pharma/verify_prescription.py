@@ -1,59 +1,72 @@
-from flask import jsonify, request, render_template, url_for
-from flask_socketio import SocketIO, join_room, leave_room
-from datetime import timedelta, datetime
+from flask import request, render_template, url_for
+from flask_socketio import join_room, leave_room
 from model.issuer import Issuer
 from model.verifier import Verifier
 from model.credential import Credential
 from model.credential_request import Credential_Request
 from model.prescription import Prescription
 from model.order import Order
-import didkit
+from model.registry import Registry
 import json
 import uuid
 import os
-import contract_listener as contract_listener
+import contract_listener
 import collections.abc
-from web3 import Web3
-
-MUMBAI_URL = os.getenv('MUMBAI_URL')
-PHARMACY_ADDRESS = os.getenv('PHARMACY_ADDRESS')
-
-# did:key
-key_issuer = Issuer(
-    'key',
-    os.getenv('DID_KEY'),
-    json.dumps(json.load(open("key.pem", "r")))
-)
-
-# did:ethr
-ethr_issuer = Issuer(
-    'ethr',
-    f'did:ethr:{PHARMACY_ADDRESS}',
-    json.dumps(json.load(open("ethkey.pem", "r")))
-)
-
-# verifier
-ethr_verifier = Verifier(
-    'ethr',
-    '0x13881'
-) 
-
-# select verifier
-verifier = ethr_verifier
-issuer = ethr_issuer
 
 def init_app(app, red, socketio, couch) : 
+        # Setup SSI model
+    if(app.config['DID_METHOD']=='did:ethr'):
+        issuer = Issuer(
+            'ethr',
+            f'did:ethr:{app.config["PHARMACY_PUBLIC_KEY"]}',
+            json.dumps(json.load(open("ethkey.pem", "r")))
+        )    
+    elif((app.config['DID_METHOD']=='did:key')):
+        issuer = Issuer(
+        'key',
+        app.config['DID_KEY'],
+        json.dumps(json.load(open("key.pem", "r")))
+    )  
+    else:
+        raise ValueError('did:method is not supported')
+
+    registry = Registry(
+        app.config['RPC_URL'],
+        app.config['REGISTRY_ADDRESS'],
+        app.config['DOCTOR_IDENTITY'],
+        app.config['PHARMACY_IDENTITY']
+    )
+    verifier = Verifier(registry)
+
     db = couch['vc']
+
     app.add_url_rule('/authorize',  view_func=authorize, methods = ['POST'], defaults={"red" : red, "socketio" : socketio})
-    app.add_url_rule('/verify/<stream_id>/<number_of_prescriptions>',  view_func=verify, methods = ['GET','POST'], defaults={"red" : red, "socketio" : socketio})
+    app.add_url_rule('/verify/<stream_id>/<number_of_prescriptions>',  
+                     view_func=verify, 
+                     methods = ['GET','POST'], 
+                     defaults={"red" : red, "socketio" : socketio, "verifier" : verifier}
+    )
     app.add_url_rule('/callback/<stream_id>',  view_func=callback, methods = ['GET','POST'], defaults={"red" : red})
     app.add_url_rule('/success/<tx>',  view_func=success, methods = ['GET','POST'], defaults={"red" : red})
-    app.add_url_rule('/order/<stream_id>',  view_func=create_order, methods = ['POST'], defaults={"red" : red, "socketio" : socketio})
+    app.add_url_rule('/order/<stream_id>',
+                     view_func=create_order, 
+                     methods = ['POST'], 
+                     defaults={"red" : red, "socketio" : socketio, "pharmacy" : app.config['PHARMACY_PUBLIC_KEY']})
     app.add_url_rule('/order/sign/<order_id>',  view_func=receive_sign, methods = ['POST'], defaults={"red" : red})
     app.add_url_rule('/order/qr/<code>',  view_func=create_qr_order, methods = ['GET'])
-    app.add_url_rule('/order/pay/<code>',  view_func=pay_order, methods = ['GET','POST'], defaults={"red" : red})
-    app.add_url_rule('/order/wait/<code>',  view_func=wait_order, methods = ['GET'], defaults={"red" : red, "db":db})
-    app.add_url_rule('/api/credentials',  view_func=get_credentials, methods = ['GET', 'POST'], defaults={"red" : red, "db": db})
+    app.add_url_rule('/order/pay/<code>',
+                     view_func=pay_order, 
+                     methods = ['GET','POST'], 
+                     defaults={"red" : red, "rpc_url" : app.config['RPC_URL']})
+    app.add_url_rule('/order/wait/<code>',  
+                     view_func=wait_order, 
+                     methods = ['GET'], 
+                     defaults={"red" : red, "db":db, "issuer":issuer}
+    )
+    app.add_url_rule('/api/credentials',  
+                     view_func=get_credentials, 
+                     methods = ['GET', 'POST'], 
+                     defaults={"red" : red, "db": db, "issuer" : issuer})
     app.add_url_rule('/insurance',  view_func=insurance, methods = ['GET'])
 
     return
@@ -76,7 +89,7 @@ def authorize(red, socketio):
     url = url_for('verify', stream_id=stream_id, number_of_prescriptions=request.form['pnumber'], _external = True)
     return render_template('qrcode.html', url=url)
 
-async def verify(stream_id, number_of_prescriptions, red, socketio):
+async def verify(stream_id, number_of_prescriptions, red, socketio, verifier):
 
     if request.method == 'GET':
         request_schema = json.load(open('credentials/CredentialRequest.json', 'r'))
@@ -88,7 +101,7 @@ async def verify(stream_id, number_of_prescriptions, red, socketio):
         presentation = form.get('presentation')
         
         try:
-            result = await verifier.verify_presentation(presentation)
+            result = await verifier.verify_presentation(presentation, 'MedicalPrescriptionCredential')
             if(result == False):
                 return 'Presentation is not valid', 500
             
@@ -140,12 +153,12 @@ def callback(stream_id, red):
     return render_template('prescription.html', prescriptions=prescriptions, stream_id=stream_id)
 
 # Handle request for creating a new order from pharmacy
-def create_order(stream_id, red, socketio):
+def create_order(stream_id, red, socketio, pharmacy):
 
     prescriptions = json.loads(red.get(f'pr:{stream_id}').decode())['prescriptions']
     for p in prescriptions:
             p['quantity'] = int(request.form.get(p['prId']))
-    order = Order([], PHARMACY_ADDRESS)
+    order = Order([], pharmacy)
     order.load_prescriptions_from_json(prescriptions)
     red.set(order.orderId, json.dumps({'order' : order.serialize(), 'stream_id' : stream_id, 'signed_order' : 'null'}))
     return order.serialize()
@@ -165,7 +178,7 @@ def create_qr_order(code):
     url = url_for('pay_order', code=code, _external = True)
     return render_template('qrcode-sc.html', url=url, code=code)
 
-async def wait_order(code, red, db):
+async def wait_order(code, red, db, issuer):
     rs = json.loads(red.get(code).decode())
     order_id = rs['order']['orderId']
     stream_id = rs['stream_id']
@@ -193,14 +206,14 @@ async def wait_order(code, red, db):
     db.save(json.loads(signed_receipt))    
     return tx
 
-def pay_order(code, red):
+def pay_order(code, red, rpc_url):
     order = json.loads(red.get(code).decode())
-    return render_template('pay.html',order=json.dumps(order), mumbai_url=MUMBAI_URL)
+    return render_template('pay.html',order=json.dumps(order), mumbai_url=rpc_url)
 
 def success(tx, red):
     return f'Payment successfully executed with TxHash:{tx}'
 
-async def get_credentials(red, db):
+async def get_credentials(red, db, issuer):
     issuanceDate = "2024-03-27T20:52:06Z" #TODO
 
     # Mango query

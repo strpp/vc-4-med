@@ -10,7 +10,7 @@ red = redis.Redis(host='localhost', port=6379, db=0)
 socketio = SocketIO()
 
 app = Flask(__name__)
-app.secret_key = 'mysecretkey' # set the secret key for sessions
+app.config.from_pyfile('config.py')
 socketio = SocketIO(app)
 prescription.init_app(app, red, socketio)
 

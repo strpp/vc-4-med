@@ -15,7 +15,7 @@ socketio = SocketIO()
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = 'mysecretkey' # set the secret key for sessions
+app.config.from_pyfile('config.py')
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 socketio = SocketIO(app)

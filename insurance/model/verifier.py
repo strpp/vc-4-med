@@ -1,11 +1,11 @@
 import didkit
 import json
 import collections.abc
+from model.registry import Registry
 
 class Verifier():
-    def __init__(self, did_method, chain_id):
-        self.did_method = did_method
-        self.chain_id = chain_id
+    def __init__(self, registry):
+        self.registry = registry
     
     def get_options_from(self, json_file):
         json_file = json.loads(json_file)
@@ -21,7 +21,7 @@ class Verifier():
         return json.dumps(options)
 
 
-    async def verify_credential(self, signed_credential):
+    async def verify_credential(self, signed_credential, credential_type):
         # verify with didkit
         options = self.get_options_from(signed_credential)
         result = await didkit.verify_credential(signed_credential, options)
@@ -29,15 +29,12 @@ class Verifier():
         if(result['errors']):
             print(result['errors'])
             return False
+        
+        # check identity on blockchain
+        verification_method = json.loads(options)['verificationMethod']
+        return await self.verify_issuer(verification_method, credential_type)
 
-        # check validity on blockchain
-
-
-        # check identity
-
-        return True
-
-    async def verify_presentation(self, presentation):
+    async def verify_presentation(self, presentation, credential_type):
         # verify with didkit
         options = self.get_options_from(presentation)
         result = await didkit.verify_presentation(presentation, options)
@@ -45,12 +42,25 @@ class Verifier():
         if(result['errors']):
             print(result['errors'])
             return False
-        # check validity on blockchain
+        
+        # check identity on blockchain
+        verification_method = json.loads(options)['verificationMethod']
+        return await self.verify_issuer(verification_method, credential_type)
+    
+    async def verify_issuer(self, verification_method, credential_type):
+        did_method = get_did_method(verification_method)
+        if(did_method=='ethr'):
+            issuer = get_ethr_identity(verification_method)
+            if(credential_type == 'MedicalPrescriptionCredential'):
+                return await self.registry.is_doctor(issuer)
+            elif(credential_type == 'MedicalPrescriptionReceipt'):
+                return await self.registry.is_pharmacy(issuer)
 
-
-        # check identity
-
-        return True
+        elif(did_method=='key'):
+            issuer = verification_method
+            return True #Todo
+        else:
+            raise ValueError(f'DID method {did_method} is not supported')
     
     def are_credentials_unique(self, presentation):
         # Check VCs are unique
@@ -65,4 +75,18 @@ class Verifier():
         
         return True
 
-        
+
+def get_did_method(verification_method):
+    return verification_method.split(':')[1]
+
+def get_ethr_identity(verification_method):
+    controller = verification_method.split(':')
+
+    # mainnet did does not have a chainId field
+    if(len(controller)==3):
+        return controller[2].split('#')[0]
+    # other net have to specify their chainId after did:ethr
+    elif(len(controller)==4):
+        return controller[3].split('#')[0]
+    else:
+        raise ValueError('Verification method is not valid')
