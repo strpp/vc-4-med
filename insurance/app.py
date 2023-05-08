@@ -55,7 +55,6 @@ async def refund():
             vc_list.append(data)
 
         for vc in vc_list:
-            print(vc)
             result = await verifier.verify_credential(json.dumps(vc), 'MedicalPrescriptionCredential')
             if(result == False):
                 return 'Invalid Prescription Credential', 500
@@ -76,7 +75,15 @@ async def refund():
                 print('Order contains a drug without a valid verifiable credential')
                 return 'Order is not valid', 500
         
-        # Initiate refund process
+        # Save refund instance
+        refund = {
+            'orderId' : order['orderId'],
+            'prescriptions' : order['prescriptions'],
+            'emitted' : False,
+            'emissionDate' : '',
+            'pharmacy' : order['pharmacy'],
+            'refundAmount' : 0
+        }
 
     # Return results
     response = jsonify({'message': 'success'})
