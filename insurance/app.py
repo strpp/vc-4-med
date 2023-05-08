@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from model.verifier import Verifier
 from model.registry import Registry
-import didkit
 import json
 import collections.abc
 import blockchain_reader
@@ -57,11 +56,9 @@ async def refund():
 
         for vc in vc_list:
             print(vc)
-            """
             result = await verifier.verify_credential(json.dumps(vc), 'MedicalPrescriptionCredential')
             if(result == False):
                 return 'Invalid Prescription Credential', 500
-            """
             prId_list.append(vc["credentialSubject"]["id"])
 
         # read blockchain to get order related to receipt
