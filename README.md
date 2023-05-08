@@ -3,13 +3,12 @@ SSI flow for the management of medical prescriptions to minimize opportunities f
 This repository contains the source code for a project developed under the supervision of Padua university.
 
 ## SETUP
-The system requires:  <br />
-a Redis instance <br />
-a CouchDB node running on port 5984  <br />
-a list of python packages  <br />
+The system requires <a href='https://docs.couchdb.org/en/stable/install/unix.html'>a CouchDB node</a> running on port 5984 with two databases : 'vc' and 'insurance'  <br />
+To install all the Python packages you need:
+<code> pip install -r requirements.txt </code>
 
 ## RUN A DEMO
-After having installed Redis and CouchDB, you can run a demo by typing:
+After setting up, you can run a demo by typing:
 <code>./start.sh</code>
 
 ### PORTS
