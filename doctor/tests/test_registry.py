@@ -1,4 +1,4 @@
-import  registry
+import registry
 import pytest
 
 """

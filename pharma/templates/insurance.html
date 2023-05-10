@@ -32,10 +32,16 @@
                     headers: {'Origin': 'https://192.168.1.20:5001'},
                     contentType: 'application/json',
                     data: JSON.stringify(vps),
-                    success: function(response) {alert('Files sent to Insurance successfully.');
+                    success: function(response) {
+                        if(response['errors']){
+                            for(e in response['errors']){
+                                alert(response['errors'][e].error)
+                            }
+                        }
+                        else alert('Files sent to Insurance successfully.');
                 },
                 error: function(jqXHR, textStatus, errorThrown) {
-                console.error('Error sending files to Insurance:', errorThrown);
+                alert.error('Error sending files to Insurance:', errorThrown);
             }
         });
             }
