@@ -1,0 +1,107 @@
+body{
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    background-color: rgba(115, 149, 174, 0.29);
+    /*background-image: url("medical-banner-with-doctor-wearing-coat.jpg");*/
+    background-size: cover;
+}
+
+h1 {
+    font-family: 'Montserrat', sans-serif;
+}
+
+.header{
+    background: #7395ae;
+    box-shadow: 0px 2px;
+    color: white;
+    font-size: large;
+    padding-left: 2%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 2%;
+}
+
+.footer{
+    background-color: black;
+    width: 100%;
+    color: white;
+    font-size: x-small;
+    text-align: center;
+    position: fixed;
+    bottom: 0;
+}
+
+.formBox{
+    /*background: rgba(217, 217, 217, 0.29);*/
+    text-align: center;
+    backdrop-filter: blur(10px);
+    margin: 5% 2%;
+}
+
+.formRow{
+    display: flex;
+    flex-flow: column wrap;
+    padding: 2%
+}
+
+.formRow > label{
+    text-align: left;
+    margin-left: 1%;
+}
+
+.formRow > input{
+    margin: 1%;
+    flex:1;
+}
+
+.button {
+    /*
+    background-color: rgb(0, 200, 154);
+    background: rgba(217, 217, 217, 0.9);
+    */
+    background: rgb(139, 23, 23);
+    color: white;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    font-size: 16px;
+}
+
+.button:hover{
+    /*background: rgba(0, 200, 154, 0.5);*/
+    background: rgba(139, 23, 23, 0.2);
+    color: black;
+    cursor: pointer;
+}
+
+table {
+    font-family: arial, sans-serif;
+    border-collapse: collapse;
+    width: 100%;
+}
+  
+td, th {
+    border: 1px solid black;
+    text-align: left;
+    padding: 8px;
+}
+  
+tr:nth-child(even) {
+    background-color: #dddddd;
+}
+
+@media screen and (min-width: 1025px) {
+    .formBox{
+        width: 70%;
+        margin-left: 15%;
+        margin-right: 15%;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    body{
+        background-position: top center;
+        background-size: 300vw auto;
+    }
+}

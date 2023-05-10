@@ -35,7 +35,7 @@ class Refund:
         self.refund_amount = amount
 
     def pay_refund(self, payer):
-        self.compute_amount()
+        #self.compute_amount()
         txh = payer.send_eth(self.refund_amount, self.pharmacy)
         return txh
     

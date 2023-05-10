@@ -7,6 +7,7 @@ load_dotenv()
 SECRET_KEY = os.getenv("MY_SECRET_KEY")
 SESSION_PERMANENT = False
 SESSION_TYPE = "filesystem"
+MODE = 'insurance'
 
 # Blockchain
 RPC_URL = os.getenv('MUMBAI_URL')

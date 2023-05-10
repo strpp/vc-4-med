@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from model.verifier import Verifier
 from model.registry import Registry
@@ -25,15 +25,35 @@ registry = Registry(
 
 verifier = Verifier(registry)
 bp = blockchainPayer(
-    app.config('RPC_URL'),
-    app.config('CHAIN_ID'),
-    app.config('MY_PUBLIC_KEY'),
-    app.config('MY_PRIVATE_KEY')
+    app.config['RPC_URL'],
+    app.config['CHAIN_ID'],
+    app.config['MY_PUBLIC_KEY'],
+    app.config['MY_PRIVATE_KEY']
 )
 
 @app.route('/')
 def index():
-    return "Insurance API"
+    return render_template('index.html')
+
+@app.route('/api/refund', methods=['GET'])
+async def get_refund():
+    dbc = dbConnector('test')
+    result_set = dbc.getAllRefund()
+    return jsonify(result_set)
+
+@app.route('/api/refund/<status>', methods=['GET'])
+async def get_all_refund(status):
+    if(status == 'false'):
+        status = False
+    elif(status == 'true'):
+        status = True
+    else:
+        return 'Bad Request', 400
+    
+    dbc = dbConnector(app.config['MODE'])
+    result_set = dbc.getAllRefundFilterEmitted(status)
+    return jsonify(result_set)
+
 
 @app.route('/api/refund', methods=['POST'])
 async def create_refund():
@@ -106,7 +126,8 @@ async def create_refund():
             p['drug'] = prId_dict[ p['prId'] ]
             
         # orderId must be unique to avoid duplicate refund
-        dbc = dbConnector()
+        dbc = dbConnector(app.config['MODE'])
+
         if( dbc.getRefund(order['orderId']) != False ):
             e = Error(order['orderId'], 'Order has already been inserted in DB')
             errors.append(e.to_dict())
@@ -114,6 +135,7 @@ async def create_refund():
         else:
             # Save refund instance
             refund = Refund(order['orderId'], order['prescriptions'], order['pharmacy'])
+            refund.compute_amount()
             dbc.save(refund)    
 
 
@@ -128,13 +150,14 @@ async def create_refund():
 @app.route('/api/emit/refund', methods=['GET','POST'])
 async def emit_refund():
     try:
-        order_ids = request.json
+        order_ids = request.json['order_ids']
     except:
         return 'Bad Request', 400
     
     errors = []
-    refunds = {}
-    dbc = dbConnector()
+    refunds = []
+    dbc = dbConnector(app.config['MODE'])
+
 
     for order_id in order_ids:
         # get refund from db
@@ -148,7 +171,7 @@ async def emit_refund():
         # pay back amount
         txh = refund.pay_refund(bp)
         if(txh == False):
-            print('Error while emitting refund')
+            print('Error while emitting refund n:{order_id}')
             e = Error(order_id, 'Error while emitting refund')
             errors.append(e.to_dict())
             continue
@@ -156,8 +179,8 @@ async def emit_refund():
         # update refund object and save on db
         updated_refund = refund.change_to_emitted(txh)
         dbc.update(updated_refund)
-        refunds[order_id] = {'txh': txh, 'amount': updated_refund.refund_amount}
-
+        refunds.append({'id':updated_refund._id, 'txh': txh, 'amount': updated_refund.refund_amount})
+    
     return jsonify({'errors': errors, 'refunds': refunds})
         
 if __name__ == '__main__':
