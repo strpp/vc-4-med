@@ -183,6 +183,15 @@ async def emit_refund():
         refunds.append({'id':updated_refund._id, 'txh': txh, 'amount': updated_refund.refund_amount})
     
     return jsonify({'errors': errors, 'refunds': refunds})
+
+@app.route('/api/order/<order_id>', methods=['GET'])
+async def retrieve_refund(order_id):
+    dbc = dbConnector(app.config['MODE'])
+    refund = dbc.getRefund(order_id)
+    if(refund == False):
+        return 'Order not found', 404
+    
+    return jsonify(refund.__dict__)
         
 if __name__ == '__main__':
    app.run(debug=True, host='0.0.0.0', port=5002)

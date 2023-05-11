@@ -10,34 +10,45 @@
 </head>
 <body>
     <div class="header">
+        <p>Insurance</p>
     </div>
 
     <div class="main">
+        <div class="popupBox">
+            <span class="closebtn" onclick="this.parentElement.style.visibility='hidden';">&times;</span>
+            <strong><div id="popupHeader"></div></strong><div id="popupText"></div>
+        </div>
         <div class="formBox">
-            <h1>Insurance</h1>
             <div class="tableBox">
                 <p>Orders to be refunded</p>
-                <table id="ordersToBeRefunded">
+                <table class="tableHeader">
                     <tr>
-                      <th>Order Id</th>
-                      <th>Refund Amount</th>
-                      <th>Pharmacy</th>
-                      <th></th>
+                        <th style="width: 350px">Order Id</th>
+                        <th style="width: 100px">Refund Amount</th>
+                        <th style="width: 450px">Pharmacy</th>
+                        <th style="width: 312px"></th>
                     </tr>
                 </table>
+                <table id="ordersToBeRefunded" class="tableData"></table>
                 <button id="emitRefund">Click to refund</button>
+                <button id="selectAllRefund">Select All</button>
+                <button id="resetRefundSelection">Reset</button>
+
             </div>
 
             <div class="tableBox">
                 <p>Orders already refunded</p>
-                <table id="orderAlreadyRefunded">
+                <table class="tableHeader">
                     <tr>
-                      <th>Order Id</th>
-                      <th>Refund Amount</th>
-                      <th>Pharmacy</th>
-                      <th>Date</th>
+                        <th style="width: 350px">Order Id</th>
+                        <th style="width: 100px">Refund Amount</th>
+                        <th style="width: 450px">Pharmacy</th>
+                        <th style="width: 312px">Date</th>
                     </tr>
-                  </table> 
+                </table>
+                <div class="wrapTableData">
+                    <table id="orderAlreadyRefunded" class="tableData"></table>
+                </div> 
             </div>
 
         </div>
