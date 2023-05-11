@@ -12,7 +12,7 @@ class blockchainPayer:
     
     def send_eth(self, amount, to):
         #get the nonce.  Prevents one from sending the transaction twice
-        nonce = self.web3.eth.get_transaction_count(self.public_key)
+        nonce = self.web3.eth.get_transaction_count(self.public_key, 'pending')
 
         #build a transaction in a dictionary
         tx = {
@@ -31,6 +31,7 @@ class blockchainPayer:
         try:
             tx_hash = self.web3.eth.send_raw_transaction(signed_tx.rawTransaction)
         except Exception as e:
+            print(e)
             return False
 
         #get transaction hash

@@ -170,6 +170,7 @@ async def emit_refund():
         
         # pay back amount
         txh = refund.pay_refund(bp)
+        print(order_id)
         if(txh == False):
             print('Error while emitting refund n:{order_id}')
             e = Error(order_id, 'Error while emitting refund')
