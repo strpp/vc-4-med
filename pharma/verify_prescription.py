@@ -105,13 +105,16 @@ async def verify(stream_id, number_of_prescriptions, red, socketio, verifier):
         try:
             result = await verifier.verify_presentation(presentation, 'MedicalPrescriptionCredential')
             if(result == False):
+                socketio.emit('error', {'error' : 'Presentation is not valid'}, to=socket_id)
                 return 'Presentation is not valid', 500
             
         except Exception as e:
             print(e)
+            socketio.emit('error', {'error' : 'Credential verification failed.'}, to=socket_id)
             return 'Credential verification failed.', 400
             
         if(verifier.are_credentials_unique(presentation) == False):
+            socketio.emit('error', {'error' : 'There are duplicate credentials in the presentation'}, to=socket_id)
             return 'There are duplicate credentials in the presentation', 500
 
         # Redirect client via server push
