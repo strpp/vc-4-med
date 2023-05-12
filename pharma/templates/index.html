@@ -2,19 +2,39 @@
 <html>
 <head>
     <title>Pharma</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter&family=Montserrat:ital,wght@0,700;1,900&family=Roboto:wght@300&family=Rubik+Mono+One&display=swap" rel="stylesheet">
 </head>
 <body>
-    <h1>Create a new order</h1>
-    <form action="/authorize" method="POST">
-        <label for="number">Insert the number of prescriptions to be scanned</label><br>
-        <input type="number" id="pnumber" name="pnumber" value="1" min="1"/><br>
-        <input type="submit" value="Submit">
-    </form>
+    <div class="header">Pharmacy</div>
 
-   <h1>Ask for a refund</h1>
-   <a href="/insurance"><button>Insurance</button></a>
+    <div class="main">
+        <div class="popupBox">
+            <span class="closebtn" onclick="this.parentElement.style.visibility='hidden';">&times;</span>
+            <strong><div id="popupHeader"></div></strong><div id="popupText"></div>
+        </div>
 
-   <h1>About</h1>
-   <a href="/info"><button>Info</button></a>
+        <div class="wrapBoxes">
+        <div class="formBox card">
+            <h1>Create a new order</h1>
+            <form action="/authorize" method="POST">
+                <label for="number">Insert the number of prescriptions to be scanned</label><br>
+                <input type="number" id="pnumber" name="pnumber" value="1" min="1"/><br>
+                <input type="submit" value="Submit" class="button">
+            </form>
+        </div>
+
+        <div class="formBox card">
+            <h1>Ask for a refund</h1>
+            <a href="/insurance"><button>Insurance</button></a>
+        </div>
+        </div>
+    </div>
+
+    <div class="footer">VC-4-MED : Proof of Concept</div>
 </body>
 </html>

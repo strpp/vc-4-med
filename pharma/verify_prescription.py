@@ -99,6 +99,8 @@ async def verify(stream_id, number_of_prescriptions, red, socketio, verifier):
     else: #POST
         form = request.form
         presentation = form.get('presentation')
+
+        socket_id = json.loads(red.get(stream_id).decode())['socket_id']
         
         try:
             result = await verifier.verify_presentation(presentation, 'MedicalPrescriptionCredential')
@@ -113,7 +115,6 @@ async def verify(stream_id, number_of_prescriptions, red, socketio, verifier):
             return 'There are duplicate credentials in the presentation', 500
 
         # Redirect client via server push
-        socket_id = json.loads(red.get(stream_id).decode())['socket_id']
         socketio.emit('stream_id', {'stream_id' : stream_id}, to=socket_id)
 
         # Save the tokens in the session
@@ -203,7 +204,11 @@ async def wait_order(code, red, db, issuer):
     signed_receipt = await issuer.issue_credential(receipt)
 
     # Save credential on couchDB
-    db.save(json.loads(signed_receipt))    
+    db.save(json.loads(signed_receipt))
+
+    #Save on redis
+    red.set(tx, json.dumps({'success' : True, 'order':order_id}))
+
     return tx
 
 def pay_order(code, red, rpc_url):
@@ -211,7 +216,15 @@ def pay_order(code, red, rpc_url):
     return render_template('pay.html',order=json.dumps(order), mumbai_url=rpc_url)
 
 def success(tx, red):
-    return f'Payment successfully executed with TxHash:{tx}'
+    try:
+        tx = json.loads(red.get(tx).decode())
+    except AttributeError as e:
+        return 'Not Found', 404
+
+    if(tx['success'] == True):
+        return render_template('success.html', tx=tx)
+    else:
+        return 'Not Found', 404
 
 async def get_credentials(red, db, issuer):
     issuanceDate = "2024-03-27T20:52:06Z" #TODO

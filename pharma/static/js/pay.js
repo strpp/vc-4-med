@@ -1,5 +1,29 @@
-const payButton = document.getElementById('payButton');
+import { showPopupBox } from "./popupBox.js";
 
+window.onload = function() {
+    const order = JSON.parse(rawOrder.
+        replace(/&#34;/g,'"')
+        .replace('"{','{').replace('}"','}')
+        .replace('""','"').replace('""','"')).order
+
+    const orderId = document.getElementById('orderId')
+    let content = document.createTextNode(`Order: ${order.orderId}`)
+    orderId.appendChild(content)
+
+    const prescriptions = document.getElementById('prescriptions')
+    for(let i=0; i< order.prescriptions.length; i++ ){
+        const li = document.createElement("p")
+        li.appendChild(document.createTextNode(order.prescriptions[i].prId))
+        prescriptions.appendChild(li)
+    }
+
+    const totalPrice = document.getElementById('totalPrice')
+    content = document.createTextNode(`Total Price: ${order.totalPrice}`)
+    totalPrice.appendChild(content)
+
+  };
+
+const payButton = document.getElementById('payButton');
 payButton.addEventListener('click', async () => { pay() });
 async function pay(){
     // ask for order and signed order
@@ -21,7 +45,6 @@ async function pay(){
             order['signed_order'],
             )
             .send({from:account[0], value: order['order']['totalPrice']*1e18});
-        //alert(`Payment successfully executed with TX /${tx.transactionHash}`)
         window.location.href = `/success/${tx.transactionHash}`;
     }catch(e){
         console.log(e)
@@ -29,6 +52,6 @@ async function pay(){
         const tx = JSON.parse(errorJson)['value']['data']['data']
         const txNumber = Object.keys(tx)[0];
         const error = tx[txNumber]['reason']
-        alert(`ERROR: ${error}`)
+        showPopupBox('alert', `ERROR: ${error}`)
     }
 }

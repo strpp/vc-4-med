@@ -24,6 +24,7 @@ for(let i=0; i<prescriptions.length;i++){
 }
 
 const submit = document.createElement('input')
+submit.className = "button"
 submit.setAttribute('type', 'submit')
 submit.setAttribute('value', 'Create order')
 form.appendChild(submit)
@@ -53,7 +54,6 @@ window.addEventListener("load", () => {
     XHR.addEventListener("error", (event) => {
       alert('Oops! Something went wrong.');
     });
-
     // Set up our request
     XHR.open("POST", `http://192.168.1.20:5001/order/${data.get("stream_id")}`);
 
