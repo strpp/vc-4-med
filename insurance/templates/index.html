@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Insurance App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter&family=Montserrat:ital,wght@0,700;1,900&family=Roboto:wght@300&family=Rubik+Mono+One&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="header">
+        <p>Insurance</p>
+    </div>
+
+    <div class="main">
+        <div class="popupBox">
+            <span class="closebtn" onclick="this.parentElement.style.visibility='hidden';">&times;</span>
+            <strong><div id="popupHeader"></div></strong><div id="popupText"></div>
+        </div>
+        <div class="formBox">
+            <div class="tableBox">
+                <p>Orders to be refunded</p>
+                <table class="tableHeader">
+                    <tr>
+                        <th style="width: 350px">Order Id</th>
+                        <th style="width: 100px">Refund Amount</th>
+                        <th style="width: 450px">Pharmacy</th>
+                        <th style="width: 312px"></th>
+                    </tr>
+                </table>
+                <table id="ordersToBeRefunded" class="tableData"></table>
+                <button id="emitRefund">Click to refund</button>
+                <button id="selectAllRefund">Select All</button>
+                <button id="resetRefundSelection">Reset</button>
+
+            </div>
+
+            <div class="tableBox">
+                <p>Orders already refunded</p>
+                <table class="tableHeader">
+                    <tr>
+                        <th style="width: 350px">Order Id</th>
+                        <th style="width: 100px">Refund Amount</th>
+                        <th style="width: 450px">Pharmacy</th>
+                        <th style="width: 312px">Date</th>
+                    </tr>
+                </table>
+                <div class="wrapTableData">
+                    <table id="orderAlreadyRefunded" class="tableData"></table>
+                </div> 
+            </div>
+
+        </div>
+    </div>
+
+    <div class="footer">VC-4-MED : Proof of Concept</div>
+    <!--JS --> 
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://kit.fontawesome.com/c4ff92cb5e.js" crossorigin="anonymous"></script>
+    <script src="{{url_for('static', filename='index.js')}}"></script>
+</body>
+</html>

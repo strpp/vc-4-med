@@ -1,4 +1,3 @@
-import didkit
 import json
 import uuid
 from datetime import timedelta, datetime

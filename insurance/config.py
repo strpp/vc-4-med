@@ -7,9 +7,13 @@ load_dotenv()
 SECRET_KEY = os.getenv("MY_SECRET_KEY")
 SESSION_PERMANENT = False
 SESSION_TYPE = "filesystem"
+MODE = 'insurance'
 
 # Blockchain
 RPC_URL = os.getenv('MUMBAI_URL')
+CHAIN_ID = 80001
+MY_PUBLIC_KEY  = os.getenv('INSURANCE_PUBLIC_KEY')
+MY_PRIVATE_KEY = os.getenv('INSURANCE_PRIVATE_KEY')
 
 # did:ethr registry
 DOCTOR_IDENTITY = '0x5D00c7A06f6fE6aC36B0347C8E5536c799E492b2'
