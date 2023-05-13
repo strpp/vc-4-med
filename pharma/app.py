@@ -9,8 +9,16 @@ import redis
 import verify_prescription
 import os
 
-red = redis.Redis(host='localhost', port=6379, db=0)
-couch = couchdb.Server('http://localhost:5984')
+try:
+    red = redis.Redis(host='localhost', port=6379, db=0)
+except redis.ConnectionError:
+    red = redis.Redis(host='redis', port=6379, db=0)
+    
+try:
+    couch = couchdb.Server('http://localhost:5984')
+except:
+    couch = couchdb.Server('http://couchdb:5984')
+
 socketio = SocketIO()
 load_dotenv()
 

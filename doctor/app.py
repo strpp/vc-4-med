@@ -5,8 +5,11 @@ import redis
 import prescription
 import os
 
-
-red = redis.Redis(host='localhost', port=6379, db=0)
+try:
+    red = redis.Redis(host='localhost', port=6379, db=0)
+except redis.ConnectionError:
+    red = redis.Redis(host='redis', port=6379, db=0)
+    
 socketio = SocketIO()
 
 app = Flask(__name__)

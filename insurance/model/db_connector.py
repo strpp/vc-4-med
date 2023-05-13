@@ -3,7 +3,10 @@ from model.refund import Refund
 
 class dbConnector:
     def __init__(self, db_name):
-        couch = couchdb.Server('http://localhost:5984')
+        try:
+            couch = couchdb.Server('http://localhost:5984')
+        except:
+            couch = couchdb.Server('http://couchdb:5984')
         self.db = couch[db_name]
 
     def save(self, refund):
