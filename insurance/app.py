@@ -63,6 +63,7 @@ async def create_refund():
         return 'Bad Request', 400
 
     errors = []
+    refunds = []
 
     for vp in vps:
         # Check Receipt presentation
@@ -136,16 +137,11 @@ async def create_refund():
             # Save refund instance
             refund = Refund(order['orderId'], order['prescriptions'], order['pharmacy'])
             refund.compute_amount()
-            dbc.save(refund)    
+            dbc.save(refund)
+            refunds.append(order['orderId'])
+    
+    return jsonify({'errors': errors, 'refunds': refunds})
 
-
-    # Return results
-    if(errors):
-        response = jsonify({'errors': errors})
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        return response, 207 # TODO: change
-    else:
-        return 'Success', 200
 
 @app.route('/api/emit/refund', methods=['GET','POST'])
 async def emit_refund():

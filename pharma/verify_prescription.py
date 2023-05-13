@@ -1,5 +1,6 @@
 from flask import request, render_template, url_for
 from flask_socketio import join_room, leave_room
+from datetime import timedelta, datetime
 from model.issuer import Issuer
 from model.verifier import Verifier
 from model.credential import Credential
@@ -38,7 +39,7 @@ def init_app(app, red, socketio, couch) :
     )
     verifier = Verifier(registry)
 
-    db = couch['vc']
+    db = couch['pharmacy']
 
     app.add_url_rule('/authorize',  view_func=authorize, methods = ['POST'], defaults={"red" : red, "socketio" : socketio})
     app.add_url_rule('/verify/<stream_id>/<number_of_prescriptions>',  
@@ -67,6 +68,14 @@ def init_app(app, red, socketio, couch) :
                      view_func=get_credentials, 
                      methods = ['GET', 'POST'], 
                      defaults={"red" : red, "db": db, "issuer" : issuer})
+    app.add_url_rule('/api/receipts',  
+                     view_func=get_receipts, 
+                     methods = ['GET'], 
+                     defaults={"db": db})
+    app.add_url_rule('/api/credentials/pending',  
+                     view_func=update_credentials_status, 
+                     methods = ['POST'], 
+                     defaults={"db": db})
     app.add_url_rule('/insurance',  view_func=insurance, methods = ['GET'])
 
     return
@@ -207,10 +216,15 @@ async def wait_order(code, red, db, issuer):
     signed_receipt = await issuer.issue_credential(receipt)
 
     # Save credential on couchDB
-    db.save(json.loads(signed_receipt))
+    db.save({
+        '_id' : order_id,
+        'receipt' : json.loads(signed_receipt), 
+        'refunded' : False, 
+        'date': datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    })
 
     #Save on redis
-    red.set(tx, json.dumps({'success' : True, 'order':order_id}))
+    red.set(tx, json.dumps({'success' : True, 'order': order_id}))
 
     return tx
 
@@ -220,31 +234,48 @@ def pay_order(code, red, rpc_url):
 
 def success(tx, red):
     try:
-        tx = json.loads(red.get(tx).decode())
+        txh = json.loads(red.get(tx).decode())
     except AttributeError as e:
         return 'Not Found', 404
 
-    if(tx['success'] == True):
+    if(txh['success'] == True):
         return render_template('success.html', tx=tx)
     else:
-        return 'Not Found', 404
+        return 'Not Found TX', 404
+    
+def get_receipts(db):
+    # Mango query
+    query = {
+        "selector": {
+            "refunded": {"$eq": False}
+        }
+    }
+
+    rs = []
+    for doc in db.find(query):
+        rs.append({
+            '_id' : doc.get('_id'),
+            'date' : doc.get('date'),
+            'refunded' : doc.get('refunded')
+        })
+    return rs
+    
 
 async def get_credentials(red, db, issuer):
-    issuanceDate = "2024-03-27T20:52:06Z" #TODO
 
     # Mango query
     query = {
         "selector": {
-            "issuanceDate": {"$lte": issuanceDate}
+            "refunded": {"$eq": False}
         }
     }
 
     # Run query
     result_set = []
-    for vc in db.find(query):
-        #Delete CouchDB keys
-        vc.pop('_id', None)
-        vc.pop('_rev', None)
+    for doc in db.find(query):
+
+        # get receipt
+        vc = doc['receipt']
 
         #Generate VPs 
         vp = {
@@ -252,7 +283,6 @@ async def get_credentials(red, db, issuer):
                 "type": ["VerifiablePresentation"],
                 "verifiableCredential": [vc],
             }
-        print(vp)
         try:
             vp = await issuer.issue_presentation(vp)
         except Exception as e:
@@ -262,6 +292,19 @@ async def get_credentials(red, db, issuer):
         result_set.append(vp)
     
     return result_set
+
+def update_credentials_status(db):
+    try:
+        order_ids = request.json['order_ids']
+    except:
+        return 'Bad Request', 400
+    
+    for order_id in order_ids:
+        doc = db.get(order_id)
+        doc['refunded'] = 'pending'
+        db.save(doc)
+    
+    return 'Success', 200
 
 def insurance():
     return render_template('insurance.html')

@@ -19,8 +19,22 @@
         </div>
         
         <div class="formBox">
-            <h1>Ask for a refund</h1>
-            <button id="sendCredentials" name="sendCredentials">Send Credentials to insurance</button>
+            <div class="tableBox">
+                <p>Orders to ask for a refund</p>
+                <table class="tableHeader">
+                    <tr>
+                        <th style="width: 350px">Order Id</th>
+                        <th style="width: 100px">Status</th>
+                        <th style="width: 450px">Date</th>
+                        <th style="width: 312px"></th>
+                    </tr>
+                </table>
+                <table id="credentialsToSend" class="tableData"></table>
+                <button id="sendCredentials" name="sendCredentials">Send Credentials to insurance</button>
+                <button id="selectAll">Select All</button>
+                <button id="resetAll">Reset</button>
+
+            </div>
 
             <div>
                 <a href="/">back to homepage</a> 
