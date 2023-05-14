@@ -1,42 +1,26 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Doctor App</title>
+    <title>Pharma App</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/static/style.css">
-    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter&family=Montserrat:ital,wght@0,700;1,900&family=Roboto:wght@300&family=Rubik+Mono+One&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="header">
-        <i class="fa-solid fa-user-doctor"></i>
-        <p id="doctor">Dr. Mario Rossi</p>
+        Pharmacy
     </div>
 
     <div class="formBox">
-        <h1 id="title"></h1>
-        <p id="message"></p>
+        <h1 id="title">Success!</h1>
+        <p id="message">Order has been successfully paid with transaction hash {{tx}}</p>
         <a href="/">Back to homepage</a>
     </div>
 
   <div class="footer">VC-4-MED : Proof of Concept</div>
   <script src="https://kit.fontawesome.com/c4ff92cb5e.js" crossorigin="anonymous"></script>
-  <script>
-    let success = "{{success}}"
-    let msg = document.getElementById('message');
-    let title = document.getElementById('title');
-
-    let titleText = "Ops something went wrong..."
-    let text = 'Error while checking the verifiable credential exchange'
-    if(success) {
-        text = document.createTextNode('Patient received the verifiable credential')
-        titleText = document.createTextNode('Success!')
-    }
-    title.appendChild(titleText)
-    msg.appendChild(text)
-  </script>
 
 </body>
 </html>

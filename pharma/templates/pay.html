@@ -2,13 +2,35 @@
 <html>
 <head>
     <title>Pharma</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter&family=Montserrat:ital,wght@0,700;1,900&family=Roboto:wght@300&family=Rubik+Mono+One&display=swap" rel="stylesheet">
 </head>
 <body>
-    <h1>Pay your order</h1>
-    <h2>Summary</h2>
+    <div class="header">Pharmacy</div>
 
-    <button id="payButton">click to pay</button>
-    <script src="{{url_for('static', filename='js/pay.js')}}"></script>
+    <div class="main">
+        <div class="popupBox">
+            <span class="closebtn" onclick="this.parentElement.style.visibility='hidden';">&times;</span>
+            <strong><div id="popupHeader"></div></strong><div id="popupText"></div>
+        </div>
+        
+        <div class="formBox">
+            <h1>Pay your order</h1>
+            <div class="orderDetails">
+                <h2>Details</h2>
+                <p id="orderId"></p>
+                <p id="prescriptions">Prescriptions</p>
+                <p id="totalPrice"></p>
+            </div>
+            <button id="payButton">click to pay</button>
+        </div>
+    </div>
+
+    <script type="module" src="{{url_for('static', filename='js/pay.js')}}"></script>
     <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
     <script>window.rawOrder = "{{order}}"; window.mumbaiUrl = "{{mumbai_url}}";</script>
 </body>

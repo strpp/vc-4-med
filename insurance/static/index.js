@@ -47,6 +47,8 @@ $('#emitRefund').click(function(){
         contentType: "application/json",
         data: JSON.stringify({'order_ids' : getOrderIdFromCheckbox()}),
         success: function(response){
+            console.log(response)
+
             if(response.errors.length > 0 ) {
                 console.log(response.errors)
                 showPopupBox('alert', response.errors[0].error)
@@ -62,6 +64,7 @@ $('#emitRefund').click(function(){
             }
         },
         error: function(jqXHR, textStatus, errorThrown) {
+            console.log(textStatus)
             showPopupBox('alert', 'Error while asking for a refund')
             console.log(errorThrown);
         }

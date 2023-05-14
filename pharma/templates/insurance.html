@@ -2,55 +2,64 @@
 <html>
 <head>
     <title>Pharma</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter&family=Montserrat:ital,wght@0,700;1,900&family=Roboto:wght@300&family=Rubik+Mono+One&display=swap" rel="stylesheet">
 </head>
 <body>
-    <h1>Ask for a refund</h1>
+    <div class="header">Pharmacy</div>
 
-    <button id="getCredentials" name="getCredentials">Get Credentials from PharmaDB</button>
-    <button id="sendCredentials" name="sendCredentials">Send Credentials to insurance</button>
-    <button id="reset">Reset</button>
+    <div class="main">
+        <div class="popupBox">
+            <span class="closebtn" onclick="this.parentElement.style.visibility='hidden';">&times;</span>
+            <strong><div id="popupHeader"></div></strong><div id="popupText"></div>
+        </div>
+        
+        <div class="formBox">
+            <div class="tableBox">
+                <p>Orders to ask for a refund</p>
+                <table class="tableHeader">
+                    <tr>
+                        <th style="width: 350px">Order Id</th>
+                        <th style="width: 100px">Status</th>
+                        <th style="width: 450px">Date</th>
+                        <th style="width: 312px"></th>
+                    </tr>
+                </table>
+                <table id="credentialsToSend" class="tableData"></table>
+                <button id="sendCredentials" name="sendCredentials">Send Credentials to insurance</button>
+                <button id="selectAll">Select All</button>
+                <button id="resetAll">Reset</button>
+
+            </div>
+
+            <div class="tableBox">
+                <p>Pending refunds</p>
+                <table class="tableHeader">
+                    <tr>
+                        <th style="width: 350px">Order Id</th>
+                        <th style="width: 100px">Status</th>
+                        <th style="width: 450px">Date</th>
+                    </tr>
+                </table>
+                <table id="pendingRefunds" class="tableData"></table>
+            </div>
+
+            <div>
+                <a href="/">back to homepage</a> 
+            </div>
+            
+        </div>
+
+
+    </div>
 
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-    <script>
-        const credentialEndpoint = 'http://192.168.1.20:5001/api/credentials'
-        const insuranceEndpoint = 'http://192.168.1.20:5002/api/refund'
-
-        let vps
-
-        $('#getCredentials').click(function(){
-            $.getJSON(credentialEndpoint, function(data){vps = data})
-            alert('Credentials are ready to be sent')
-        })
-
-        $('#sendCredentials').click(function(){
-            if(vps) {
-                $.ajax({
-                    type: 'POST',
-                    url: insuranceEndpoint,
-                    headers: {'Origin': 'https://192.168.1.20:5001'},
-                    contentType: 'application/json',
-                    data: JSON.stringify(vps),
-                    success: function(response) {
-                        if(response['errors']){
-                            for(e in response['errors']){
-                                alert(response['errors'][e].error)
-                            }
-                        }
-                        else alert('Files sent to Insurance successfully.');
-                },
-                error: function(jqXHR, textStatus, errorThrown) {
-                alert.error('Error sending files to Insurance:', errorThrown);
-            }
-        });
-            }
-            else alert('error: no vps to send')
-        })        
-
-        $('#reset').click(function(){
-            vps = null
-        })        
-    </script>
+    <script type="module" src="{{url_for('static', filename='js/insurance.js')}}"></script>
+    <script src="https://kit.fontawesome.com/c4ff92cb5e.js" crossorigin="anonymous"></script>
 </body>
 </html>
