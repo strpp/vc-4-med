@@ -68,7 +68,7 @@ def init_app(app, red, socketio, couch) :
                      view_func=get_credentials, 
                      methods = ['GET', 'POST'], 
                      defaults={"red" : red, "db": db, "issuer" : issuer})
-    app.add_url_rule('/api/receipts',  
+    app.add_url_rule('/api/receipts/<status>',  
                      view_func=get_receipts, 
                      methods = ['GET'], 
                      defaults={"db": db})
@@ -243,11 +243,17 @@ def success(tx, red):
     else:
         return 'Not Found TX', 404
     
-def get_receipts(db):
+def get_receipts(db, status):
+
+    if(status == 'false'):
+        status = False
+    elif(status == 'true'):
+        status = True
+
     # Mango query
     query = {
         "selector": {
-            "refunded": {"$eq": False}
+            "refunded": {"$eq": status}
         }
     }
 

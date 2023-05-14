@@ -7,11 +7,25 @@ $( document ).ready(
 
     $.ajax({   
         type: 'GET',
-        url: 'http://192.168.1.20:5001/api/receipts' ,
+        url: 'http://192.168.1.20:5001/api/receipts/false' ,
         contentType: 'application/json',
         
         success: function(response) {
-            loadTable(response)
+            loadTableCredentialToSend(response)
+        },
+        
+        error: function(jqXHR, textStatus, errorThrown) {
+            showPopupBox('alert', 'Error while loading files from database');
+        }
+    }),
+
+    $.ajax({   
+        type: 'GET',
+        url: 'http://192.168.1.20:5001/api/receipts/pending' ,
+        contentType: 'application/json',
+        
+        success: function(response) {
+            loadTablePendingRefunds(response)
         },
         
         error: function(jqXHR, textStatus, errorThrown) {
@@ -21,6 +35,14 @@ $( document ).ready(
 );
 
 $('#sendCredentials').click(function(){
+    const checkboxes = $('#credentialsToSend').find("input[type='checkbox']:checked")
+
+    if(checkboxes.length < 1){
+        showPopupBox('alert', 'Please select at least a credential')
+        return
+    }
+
+
     $.getJSON(credentialEndpoint, function(data){
         if(!data.length) showPopupBox('alert', 'There is no credentials to send')
         else sendVpsToInsurance(data)
@@ -82,7 +104,7 @@ function sendVpsToInsurance(data){
     else showPopupBox('alert', 'error: no vps to send')
 }
 
-function loadTable(items){
+function loadTableCredentialToSend(items){
     console.log(items)
     for(let i=0; i<items.length; i++){
         $(`#credentialsToSend`).append(
@@ -104,16 +126,35 @@ function loadTable(items){
     }
 }
 
+function loadTablePendingRefunds(items){
+    console.log(items)
+    for(let i=0; i<items.length; i++){
+        $(`#pendingRefunds`).append(
+            `<tr>
+                <td style="width: 477px">
+                    ${items[i]._id}
+                </td>
+                <td style="width: 140.5px">
+                    ${items[i].refunded}
+                </td>
+                <td style="width: 611px">
+                    ${items[i].date}
+                </td>
+            </tr>`
+        )
+    }
+}
+
 $('#selectAll').click(function(){
     const checkboxes = $('#credentialsToSend').find("input[type='checkbox']")
-    for(i=0; i<checkboxes.length;i++){
+    for(let i=0; i<checkboxes.length;i++){
         checkboxes.prop('checked', true);
     }
 })
 
 $('#resetAll').click(function(){
     const checkboxes = $('#credentialsToSend').find("input[type='checkbox']")
-    for(i=0; i<checkboxes.length;i++){
+    for(let i=0; i<checkboxes.length;i++){
         checkboxes.prop('checked', false);
     }
 })
