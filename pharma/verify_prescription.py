@@ -8,10 +8,9 @@ from model.credential_request import Credential_Request
 from model.prescription import Prescription
 from model.order import Order
 from model.registry import Registry
+from model.blockchain_reader import BlockchainReader
 import json
 import uuid
-import os
-import contract_listener
 import collections.abc
 
 def init_app(app, red, socketio, couch) : 
@@ -37,7 +36,10 @@ def init_app(app, red, socketio, couch) :
         app.config['DOCTOR_IDENTITY'],
         app.config['PHARMACY_IDENTITY']
     )
+
     verifier = Verifier(registry)
+
+    reader = BlockchainReader(app.config['RPC_URL'], app.config['VC4MED_ADDRESS']) 
 
     db = couch['pharmacy']
 
@@ -62,7 +64,7 @@ def init_app(app, red, socketio, couch) :
     app.add_url_rule('/order/wait/<code>',  
                      view_func=wait_order, 
                      methods = ['GET'], 
-                     defaults={"red" : red, "db":db, "issuer":issuer}
+                     defaults={"red" : red, "db":db, "issuer":issuer, "reader":reader}
     )
     app.add_url_rule('/api/credentials',  
                      view_func=get_credentials, 
@@ -191,13 +193,13 @@ def create_qr_order(code):
     url = url_for('pay_order', code=code, _external = True)
     return render_template('qrcode-sc.html', url=url, code=code)
 
-async def wait_order(code, red, db, issuer):
+async def wait_order(code, red, db, issuer, reader):
     rs = json.loads(red.get(code).decode())
     order_id = rs['order']['orderId']
     stream_id = rs['stream_id']
 
     # run blockchain listener
-    tx = contract_listener.main(order_id)
+    tx = reader.read(order_id, 50, 2)
     if not tx:
         return 'Timeout while listening blockchain', 500
 
