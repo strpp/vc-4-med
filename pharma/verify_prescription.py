@@ -72,7 +72,7 @@ def init_app(app, red, socketio, couch) :
                      view_func=get_receipts, 
                      methods = ['GET'], 
                      defaults={"db": db})
-    app.add_url_rule('/api/credentials/pending',  
+    app.add_url_rule('/api/credentials/<status>',  
                      view_func=update_credentials_status, 
                      methods = ['POST'], 
                      defaults={"db": db})
@@ -299,15 +299,18 @@ async def get_credentials(red, db, issuer):
     
     return result_set
 
-def update_credentials_status(db):
+def update_credentials_status(db, status):
     try:
         order_ids = request.json['order_ids']
     except:
         return 'Bad Request', 400
     
+    if(status=='true'):
+        status=True
+    
     for order_id in order_ids:
         doc = db.get(order_id)
-        doc['refunded'] = 'pending'
+        doc['refunded'] = status
         db.save(doc)
     
     return 'Success', 200

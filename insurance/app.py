@@ -7,6 +7,7 @@ from model.refund import Refund
 from model.db_connector import dbConnector
 from model.blockchain_payer import blockchainPayer
 import json
+import requests
 import collections.abc
 import blockchain_reader
 
@@ -177,6 +178,10 @@ async def emit_refund():
         updated_refund = refund.change_to_emitted(txh)
         dbc.update(updated_refund)
         refunds.append({'id':updated_refund._id, 'txh': txh, 'amount': updated_refund.refund_amount})
+    
+    # notify pharma about refund success
+    order_ids = list(map(lambda x: x.get('id'), refunds))
+    res = requests.post('http://192.168.1.20:5001/api/credentials/true', json={'order_ids': order_ids})
     
     return jsonify({'errors': errors, 'refunds': refunds})
 

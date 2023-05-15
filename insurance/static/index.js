@@ -65,7 +65,7 @@ $('#emitRefund').click(function(){
         },
         error: function(jqXHR, textStatus, errorThrown) {
             console.log(textStatus)
-            showPopupBox('alert', 'Error while asking for a refund')
+            showPopupBox('alert', 'Error while asking for a refund: check account balance')
             console.log(errorThrown);
         }
     });

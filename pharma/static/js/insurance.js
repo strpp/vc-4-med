@@ -49,11 +49,11 @@ $('#sendCredentials').click(function(){
     })
 })
 
-function updateRefundToPending(refunds){
+function updateRefundStatus(refunds, status){
 
     $.ajax({
         type: 'POST',
-        url: 'http://192.168.1.20:5001/api/credentials/pending',
+        url: `http://192.168.1.20:5001/api/credentials/${status}`, 
         contentType: 'application/json',
         data: JSON.stringify({'order_ids' : refunds}),
         success: function(response){ console.log('updated correctly')},
@@ -86,13 +86,11 @@ function sendVpsToInsurance(data){
                 if(response['refunds']){
                     for(let i=0; i< response['refunds'].length; i++){
                         msgs.push({
-                            'id':response['refunds'][i].id,
-                            'txh':response['refunds'][i].txh,
-                            'amount':response['refunds'][i].amount,
+                            'id':response['refunds'][i],
                             'status':'success'
                         })
                     }
-                    updateRefundToPending(response['refunds'])
+                    updateRefundStatus(response['refunds'], 'pending')
                 }
                 showPopupMsg(msgs);
             },

@@ -30,6 +30,10 @@ function showPopupMsg(msgs){
         else if(msgs[m].status == 'success') $('#popupText').append(showSuccess(msgs[m]))
 
     }
+
+    $('.popupBox').append(
+            `<button onclick="this.parentElement.style.visibility='hidden'; location.reload();">Ok</button>`
+    )
 }
 
 function showError(msg){
@@ -41,13 +45,16 @@ function showError(msg){
     return msg
 }
 
-function showSuccess(msg){
-    msg =`<p>
+function showSuccess(msg){    
+    msgToShow =`<p>
     Order ${msg.id}: <br>
     <i class="fa-solid fa-check" style="color: #00ff00;"></i>
     txh ${msg.txh} refunded ${msg.amount}
     </p>`
-    return msg
+
+    if(msg.txh === undefined) msgToShow = `<p>Order ${msg}<br><i class="fa-solid fa-check" style="color: #00ff00;"></i></p>`
+
+    return msgToShow
 }
 
 export {showPopupBox, showPopupMsg};

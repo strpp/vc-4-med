@@ -39,19 +39,17 @@ async function pay(){
     const vc4med = new web3.eth.Contract(ABI_CONTRACT, '0xCD3D21d1e7f8303d2450a2954444E04a2AFB20AE')
 
     // pay
-    try{
+    try {
+        web3.eth.handleRevert = true   
         const tx = await vc4med.methods.payOrder(
             order['order'], 
             order['signed_order'],
             )
-            .send({from:account[0], value: order['order']['totalPrice']*1e18});
+        .send({from:account[0], value: order['order']['totalPrice']*1e18})
         window.location.href = `/success/${tx.transactionHash}`;
-    }catch(e){
-        console.log(e)
-        const errorJson = e.message.substring(e.message.indexOf('{'), e.message.lastIndexOf("'"))
-        const tx = JSON.parse(errorJson)['value']['data']['data']
-        const txNumber = Object.keys(tx)[0];
-        const error = tx[txNumber]['reason']
-        showPopupBox('alert', `ERROR: ${error}`)
+
+    } catch (error) {
+        console.log(error.reason)
+        showPopupBox('alert', `Transaction failed: ${error.reason}`)
     }
 }
