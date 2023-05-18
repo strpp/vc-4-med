@@ -61,12 +61,26 @@ h1 {
     background: rgba(217, 217, 217, 0.9);
     */
     background: #379683;
-    color: white;
+    margin: 5px;
+    appearance: none;
+    border: 1px solid rgba(27, 31, 35, .15);
+    border-radius: 6px;
+    box-shadow: rgba(27, 31, 35, .1) 0 1px 0;
+    box-sizing: border-box;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 20px;
+    padding: 6px 16px;
+    position: relative;
     text-align: center;
     text-decoration: none;
-    padding: 10px 10px;
-    margin: 5px;
-    font-size: 15px;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    vertical-align: middle;
+    white-space: nowrap;
+
 }
 
 .button:hover, button:hover{
@@ -151,6 +165,16 @@ tr:nth-child(even) {
   color: black;
 }
 
+.left{
+    text-align: left;
+}
+
+.mini{
+    width: 30%;
+    margin-left: 35%;
+    margin-right: 35%;
+}
+
 @media screen and (min-width: 1025px) {
     .formBox{
         width: 80%;
@@ -160,8 +184,11 @@ tr:nth-child(even) {
 
     .card{
         border: 3px #379683 solid;
-        border-radius: 5%;
+        border-radius: 1rem;
         background: rgba(55, 150, 131, 0.35);
+        border-width: 1px;
+        border-color: rgb(6, 6, 6);
+        padding: 1rem;
     }
 
     .wrapBoxes{

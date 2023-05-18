@@ -199,10 +199,10 @@ async def wait_order(code, red, db, issuer, reader):
     stream_id = rs['stream_id']
 
     # run blockchain listener
-    tx = reader.read(order_id, 50, 2)
-    if not tx:
-        return 'Timeout while listening blockchain', 500
-
+    status, tx = reader.read(order_id, 50, 2)
+    if not status:
+        return f'Error: {tx}', 500
+    print(tx)
     # Get data from Redis (prescription_id, quantity, socket_id)
     vp = json.loads(red.get(stream_id).decode())['vp']
 

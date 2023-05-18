@@ -1,6 +1,7 @@
 import json
 from time import sleep
 from web3 import Web3
+from web3.middleware import geth_poa_middleware
 
 class BlockchainReader():
 
@@ -8,76 +9,131 @@ class BlockchainReader():
         # add your blockchain connection information
         self.rpc_url = rpc_url
         self.web3 = Web3(Web3.HTTPProvider(rpc_url))
+        self.web3.middleware_onion.inject(geth_poa_middleware, layer=0) # needed in PoA chain like Mumbai
 
         # address and abi
         abi = json.load(open('static/vc4med.json', 'r'))['abi']
+        self.contract_address = contract_address
         self.contract = self.web3.eth.contract(address=contract_address, abi=abi)
+        self.latest_block = self.web3.eth.block_number
 
-    def read_blocks(self, filter):
-        for block in filter.get_new_entries():
-            # get the block number
-            block_number = block['number']
+    def get_tx_error(self, tx_hash):
+        tx = self.web3.eth.get_transaction(tx_hash)
+        try:
+            tx = {
+                'blockHash': tx['blockHash'].hex(),
+                'blockNumber': tx['blockNumber'],
+                'hash': tx['hash'].hex(),
+                'accessList': tx['accessList'],
+                'chainId': tx['chainId'],
+                'from': tx['from'],
+                'gas': tx['gas'],
+                'gasPrice': tx['gasPrice'],
+                'input': tx['input'],
+                'nonce': tx['nonce'],
+                'r': tx['r'].hex(),
+                's': tx['s'].hex(),
+                'to': tx['to'],
+                'transactionIndex': tx['transactionIndex'],
+                'type': tx['type'],
+                'v': tx['v'],
+                'value': tx['value']
+            }   
 
-            # if the block number is greater than the latest block number, analyze the block
-            if block_number > self.latest_block_number:
-                # update the latest block number
-                self.latest_block_number = block_number
+            result = self.web3.eth.call(tx, tx['blockNumber'])
 
-            # retrieve the block
-            block = self.web3.eth.get_block(block_number, full_transactions=True)
+        except Exception as e:
+            return e
 
-            # loop over the transactions in the block and check if they interacted with the contract
-            for tx in block.transactions:
-                # get the transaction receipt
-                receipt = self.web3.eth.get_transaction_receipt(tx.hash)
+    def read_blocks(self, order_id):
+        try:
+            current_block = self.web3.eth.block_number
+            print(current_block)
+        except Exception as e:
+            print('Error while reading block')
+            print(e)
+            return False
 
-                # check if the transaction interacted with the contract
-                if receipt.contract_address == self.contract_address:
-                    # fail
-                    if(receipt.status == 0):
-                        print('transaction failed')
-                        for log in receipt.logs:
-                            try:
-                                decoded_log = self.web3.eth.abi.decode_log(log.topics, log.data, log.topics[0])
-                                if decoded_log['event'] == 'Error':
-                                    print(decoded_log['args']['reason'])
-                            except:
-                                pass
-                    return False
+
+        if current_block > self.latest_block:
+            block_range = range(self.latest_block, current_block+1)  # Get the range of new blocks
+            print(block_range)
+
+        for block_number in block_range:
+            print(block_number)
+            try:
+                block = self.web3.eth.get_block(block_number)
+                transactions = block['transactions']
+            except Exception as e:
+                print(f'error while reading block #{block_number}')
+                print(e)
+
+            for tx_hash in transactions:
+                transaction = self.web3.eth.get_transaction(tx_hash)
+                try:
+                    if transaction['to'] == self.contract_address:
+                        print(tx_hash.hex())
+                        return self.handle_transaction(transaction, order_id)
+                except Exception as e:
+                    pass
+        
+        self.latest_block = current_block  # Update the latest_block to the current_block
+
+    def handle_transaction(self, transaction, order_id):
+        # Decode the transaction input using the contract's ABI
+        decoded_input = self.contract.decode_function_input(transaction['input'])
+
+        # Extract the function name and parameters
+        function_name = decoded_input[0]
+        parameters = decoded_input[1:]
+        print(parameters[0])
+        current_order_id = parameters[0]['order']['orderId']
+
+        print("New transaction:")
+        print("  Transaction Hash:", transaction['hash'].hex())
+        print("  From:", transaction['from'])
+        print("  To:", transaction['to'])
+        print("  Function Name:", function_name)
+        print("  Parameters:", parameters)
+        print("  OrderId:", current_order_id)
+
+        if(current_order_id != order_id):
+            return
+
+        receipt = self.web3.eth.get_transaction_receipt(transaction['hash'].hex())
+        print(receipt)
+
+        if(receipt["status"]==1):
+            return True, transaction['hash'].hex()
+        else:
+            error = self.get_tx_error(transaction['hash'].hex())
+            print(error)
+            return False, error
+
 
     # create a filter for the latest block and look for the "orderHasBeenPayed" event
     # if event is found, return the hash. Else timeout error
-    def read(self, condition, timeout, polling_delta):
+    def read(self, order_id, timeout, polling_delta):
 
-        try:
-            event_filter = self.contract.events.orderHasBeenPayed.create_filter(fromBlock='latest')
-            block_filter = self.web3.eth.filter('latest')
-        except:
-            print('Error while creating filter')
-            return False
-    
         i = 0
         while(i<timeout):
             try:
-                # look for events to check if transaction is ok
-                read_events(event_filter, condition)
+                result = self.read_blocks(order_id)
+                if(result != None):
+                    return result[0], result[1]
 
-                # NOTE: I think we could avoid reading events, because when we check the transaction status we already know if
-                # it was successfully completed or not. So we could just read transactions, and if true find the event in the block to
-                # have a confirm.
-
-                # read blocks to check if transaction is failed
-                self.read_blocks(block_filter)
-
-            except:
+            except Exception as e:
+                print(e)
                 print('Error while reading blockchain')
                 break
+            
 
             sleep(polling_delta)
+            print(i)
             i+=1
 
         print('Timeout reached')
-        return False
+        return False, 'Timeout'
     
     # get events using the filter and return true if the condition is met
 def read_events(filter, condition):

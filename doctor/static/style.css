@@ -56,16 +56,25 @@ h1 {
 }
 
 .button {
-    /*
-    background-color: rgb(0, 200, 154);
-    background: rgba(217, 217, 217, 0.9);
-    */
     background: rgb(139, 23, 23);
-    color: white;
-    padding: 15px 32px;
+    appearance: none;
+    border: 1px solid rgba(27, 31, 35, .15);
+    border-radius: 6px;
+    box-shadow: rgba(27, 31, 35, .1) 0 1px 0;
+    box-sizing: border-box;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 20px;
+    padding: 6px 16px;
+    position: relative;
     text-align: center;
     text-decoration: none;
-    font-size: 16px;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    vertical-align: middle;
+    white-space: nowrap;
 }
 
 .button:hover{
