@@ -1,10 +1,10 @@
-const insuranceEndpoint = 'http://192.168.1.20:5002/'
+const insuranceEndpoint = `http://${window.location.hostname}:5002/api`
 
 $( document ).ready(
 
     $.ajax({   
         type: 'GET',
-        url: `${insuranceEndpoint}api/refund/false` ,
+        url: `${insuranceEndpoint}/refund/false` ,
         contentType: 'application/json',
         
         success: function(response) {
@@ -19,7 +19,7 @@ $( document ).ready(
 
     $.ajax({   
         type: 'GET',
-        url: `${insuranceEndpoint}api/refund/true` ,
+        url: `${insuranceEndpoint}/refund/true` ,
         contentType: 'application/json',
         
         success: function(response) {
@@ -43,7 +43,7 @@ $('#emitRefund').click(function(){
 
     $.ajax({
         type: "POST",
-        url:  `${insuranceEndpoint}api/emit/refund`,
+        url:  `${insuranceEndpoint}/emit/refund`,
         contentType: "application/json",
         data: JSON.stringify({'order_ids' : getOrderIdFromCheckbox()}),
         success: function(response){
@@ -77,7 +77,7 @@ function loadRefundToEmit(items){
         $(`#ordersToBeRefunded`).append(
             `<tr>
                 <td style="width: 350px">
-                    <a href='http://192.168.1.20:5002/api/order/${items[i]._id}'>
+                    <a href='${insuranceEndpoint}/order/${items[i]._id}'>
                     ${items[i]._id}
                     </a>    
                 </td>
@@ -96,7 +96,7 @@ function loadRefundEmitted(items){
         $(`#orderAlreadyRefunded`).append(
             `<tr>
                 <td style="width: 350px">
-                <a href='http://192.168.1.20:5002/api/order/${items[i]._id}'>
+                <a href='${insuranceEndpoint}/order/${items[i]._id}'>
                     ${items[i]._id}
                 </a>    
                 </td>

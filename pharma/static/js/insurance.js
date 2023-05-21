@@ -43,7 +43,7 @@ $('#sendCredentials').click(function(){
     }
 
 
-    $.getJSON(credentialEndpoint, function(data){
+    $.getJSON(`${pharmaEndpoint}/credentials`, function(data){
         if(!data.length) showPopupBox('alert', 'There is no credentials to send')
         else sendVpsToInsurance(data)
     })
