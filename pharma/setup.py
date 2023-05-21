@@ -42,3 +42,5 @@ def generate_pem_from_ethereum_account():
 
     else:
         print('key is not valid')
+
+generate_pem_from_ethereum_account()
