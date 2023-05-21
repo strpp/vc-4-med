@@ -6,7 +6,7 @@ window.onload = function (){
     // Define what happens on successful data submission
     XHR.addEventListener("load", async (event) => {
       if(event.target.status == 200) window.location.href = `/success/${event.target.responseText}`;
-      else showPopupBox('alert', 'Payment attempt failed')
+      else showPopupBox('alert', `${event.target.responseText}`)
     });
 
     // Define what happens in case of error
