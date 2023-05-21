@@ -10,6 +10,7 @@ import json
 import requests
 import collections.abc
 import blockchain_reader
+import socket
 
 
 app = Flask(__name__)
@@ -32,13 +33,15 @@ bp = blockchainPayer(
     app.config['MY_PRIVATE_KEY']
 )
 
+hostname = socket.gethostname()
+
 @app.route('/')
 def index():
     return render_template('index.html')
 
 @app.route('/api/refund', methods=['GET'])
 async def get_refund():
-    dbc = dbConnector('test')
+    dbc = dbConnector(app.config['MODE'], hostname)
     result_set = dbc.getAllRefund()
     return jsonify(result_set)
 
@@ -51,7 +54,7 @@ async def get_all_refund(status):
     else:
         return 'Bad Request', 400
     
-    dbc = dbConnector(app.config['MODE'])
+    dbc = dbConnector(app.config['MODE'], hostname)
     result_set = dbc.getAllRefundFilterEmitted(status)
     return jsonify(result_set)
 
@@ -128,7 +131,8 @@ async def create_refund():
             p['drug'] = prId_dict[ p['prId'] ]
             
         # orderId must be unique to avoid duplicate refund
-        dbc = dbConnector(app.config['MODE'])
+        dbc = dbConnector(app.config['MODE'], hostname)
+
 
         if( dbc.getRefund(order['orderId']) != False ):
             e = Error(order['orderId'], 'Order has already been inserted in DB')
@@ -153,7 +157,8 @@ async def emit_refund():
     
     errors = []
     refunds = []
-    dbc = dbConnector(app.config['MODE'])
+    dbc = dbConnector(app.config['MODE'], hostname)
+
 
 
     for order_id in order_ids:
@@ -187,7 +192,7 @@ async def emit_refund():
 
 @app.route('/api/order/<order_id>', methods=['GET'])
 async def retrieve_refund(order_id):
-    dbc = dbConnector(app.config['MODE'])
+    dbc = dbConnector(app.config['MODE'], hostname)
     refund = dbc.getRefund(order_id)
     if(refund == False):
         return 'Order not found', 404

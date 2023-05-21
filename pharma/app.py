@@ -4,22 +4,29 @@ from flask_socketio import SocketIO
 from flask_qrcode import QRcode
 from flask_cors import CORS
 from dotenv import load_dotenv
+import os
+import socket
 import couchdb
 import redis
 import verify_prescription
+
+load_dotenv()
 
 try:
     red = redis.Redis(host='localhost', port=6379, db=0)
 except redis.ConnectionError:
     red = redis.Redis(host='redis', port=6379, db=0)
     
-try:
+hostname = socket.gethostname()
+COUCH_ADMIN = os.getenv('COUCH_ADMIN')
+COUCH_PWD = os.getenv('COUCH_PWD')
+
+if(hostname == 'raspberrypi'):
     couch = couchdb.Server('http://localhost:5984')
-except:
-    couch = couchdb.Server('http://couchdb:5984')
+else: # we are on docker instance
+    couch = couchdb.Server(f'http://{COUCH_ADMIN}:{COUCH_PWD}@172.21.0.2:5984')
 
 socketio = SocketIO()
-load_dotenv()
 
 app = Flask(__name__)
 app.config.from_pyfile('config.py')

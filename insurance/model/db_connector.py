@@ -1,12 +1,18 @@
 import couchdb
+import os
+from dotenv import load_dotenv
 from model.refund import Refund
 
+load_dotenv()
+COUCH_ADMIN = os.getenv('COUCH_ADMIN')
+COUCH_PWD = os.getenv('COUCH_PWD')
+
 class dbConnector:
-    def __init__(self, db_name):
-        try:
+    def __init__(self, db_name, hostname):
+        if(hostname == 'raspberrypi'):
             couch = couchdb.Server('http://localhost:5984')
-        except:
-            couch = couchdb.Server('http://couchdb:5984')
+        else:
+            couch = couchdb.Server('http://{COUCH_ADMIN}:{COUCH_PWD}@172.21.0.2:5984')
         self.db = couch[db_name]
 
     def save(self, refund):
