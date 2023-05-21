@@ -1,13 +1,13 @@
 import { showPopupBox, showPopupMsg } from "./popupBox.js"
 
-const credentialEndpoint = 'http://192.168.1.20:5001/api/credentials'
-const insuranceEndpoint = 'http://192.168.1.20:5002/api/refund'
+const pharmaEndpoint = `http://${window.location.hostname}:5001/api`
+const insuranceEndpoint = `http://${window.location.hostname}:5002/api`
 
 $( document ).ready(
 
     $.ajax({   
         type: 'GET',
-        url: 'http://192.168.1.20:5001/api/receipts/false' ,
+        url: `${pharmaEndpoint}/receipts/false`,
         contentType: 'application/json',
         
         success: function(response) {
@@ -21,7 +21,7 @@ $( document ).ready(
 
     $.ajax({   
         type: 'GET',
-        url: 'http://192.168.1.20:5001/api/receipts/pending' ,
+        url: `${pharmaEndpoint}/receipts/pending` ,
         contentType: 'application/json',
         
         success: function(response) {
@@ -53,7 +53,7 @@ function updateRefundStatus(refunds, status){
 
     $.ajax({
         type: 'POST',
-        url: `http://192.168.1.20:5001/api/credentials/${status}`, 
+        url: `${pharmaEndpoint}/credentials/${status}`, 
         contentType: 'application/json',
         data: JSON.stringify({'order_ids' : refunds}),
         success: function(response){ console.log('updated correctly')},
@@ -66,8 +66,7 @@ function sendVpsToInsurance(data){
     if(data) {
         $.ajax({
             type: 'POST',
-            url: insuranceEndpoint,
-            //headers: {'Origin': 'https://192.168.1.20:5001'},
+            url: `${insuranceEndpoint}/refund`,
             contentType: 'application/json',
             data: JSON.stringify(data),
             success: function(response) {

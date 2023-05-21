@@ -55,7 +55,7 @@ window.addEventListener("load", () => {
       alert('Oops! Something went wrong.');
     });
     // Set up our request
-    XHR.open("POST", `http://192.168.1.20:5001/order/${data.get("stream_id")}`);
+    XHR.open("POST", `http://${window.location.hostname}:5001/order/${data.get("stream_id")}`);
 
     // The data sent is what the user provided in the form
     XHR.send(data);
@@ -104,7 +104,7 @@ async function signOrder(order){
 
       const sendSignedOrder = new XMLHttpRequest()
 
-      sendSignedOrder.open("POST", `http://192.168.1.20:5001/order/sign/${orderId}`);
+      sendSignedOrder.open("POST", `http://${window.location.hostname}:5001/order/sign/${orderId}`);
       sendSignedOrder.setRequestHeader("Content-Type", "application/json");
       //alert(signedOrder)
       sendSignedOrder.send(JSON.stringify({"signedOrder" : signedOrder}));

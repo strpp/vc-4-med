@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 import couchdb
 import redis
 import verify_prescription
-import os
 
 try:
     red = redis.Redis(host='localhost', port=6379, db=0)
