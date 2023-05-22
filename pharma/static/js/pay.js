@@ -46,7 +46,7 @@ async function pay(){
             order['signed_order'],
             )
         .send({from:account[0], value: order['order']['totalPrice']*1e18})
-        setTimeout( () => window.location.href = `/success/${tx.transactionHash}`, 4000); // TODO: just a silly fix
+        setTimeout( () => window.location.href = `/success/${tx.transactionHash}`, 30000); // TODO: just a silly fix
 
     } catch (error) {
         console.log(error.reason)
