@@ -45,8 +45,10 @@ function showError(msg){
     return msg
 }
 
-function showSuccess(msg){    
+function showOrdeSuccess(msg){    
 
+    let msgToShow = ''
+    
     if(msg.txh === undefined)msgToShow = `<p>Order ${msg}<br><i class="fa-solid fa-check" style="color: #00ff00;"></i></p>`
     else{
         msgToShow =`<p>
