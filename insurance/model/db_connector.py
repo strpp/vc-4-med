@@ -12,7 +12,7 @@ class dbConnector:
         if(hostname == 'raspberrypi'):
             couch = couchdb.Server('http://localhost:5984')
         else:
-            couch = couchdb.Server('http://{COUCH_ADMIN}:{COUCH_PWD}@172.21.0.2:5984')
+            couch = couchdb.Server(f'http://{COUCH_ADMIN}:{COUCH_PWD}@172.21.0.2:5984')
         self.db = couch[db_name]
 
     def save(self, refund):

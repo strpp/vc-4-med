@@ -54,7 +54,7 @@ class BlockchainReader():
             print(e)
             return False
 
-
+        print(self.latest_block, current_block)
         if current_block > self.latest_block:
             block_range = range(self.latest_block, current_block+1)  # Get the range of new blocks
             print(block_range)
@@ -67,6 +67,8 @@ class BlockchainReader():
             except Exception as e:
                 print(f'error while reading block #{block_number}')
                 print(e)
+            
+            self.latest_block = current_block  # Update the latest_block to the current_block       
 
             for tx_hash in transactions:
                 transaction = self.web3.eth.get_transaction(tx_hash)
@@ -76,8 +78,6 @@ class BlockchainReader():
                         return self.handle_transaction(transaction, order_id)
                 except Exception as e:
                     pass
-        
-        self.latest_block = current_block  # Update the latest_block to the current_block
 
     def handle_transaction(self, transaction, order_id):
         # Decode the transaction input using the contract's ABI
@@ -97,6 +97,7 @@ class BlockchainReader():
         print("  Parameters:", parameters)
         print("  OrderId:", current_order_id)
 
+        print(current_order_id, order_id)
         if(current_order_id != order_id):
             return
 

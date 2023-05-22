@@ -79,7 +79,7 @@ async def create_refund():
                 'Invalid receipt presentation'
             )
             errors.append(e.to_dict())
-            continue
+            break
         
         prescription = json.loads(vp)['verifiableCredential'][0]['credentialSubject']['invoice']['description']
         result = await verifier.verify_presentation(json.dumps(prescription), 'MedicalPrescriptionCredential')
@@ -87,7 +87,7 @@ async def create_refund():
             print('Invalid prescription presentation')
             e = Error(prescription['id'],'Invalid prescription presentation')
             errors.append(e.to_dict())
-            continue
+            break
         
         # Check Prescription credential
         vc_list = []
@@ -106,7 +106,7 @@ async def create_refund():
                 print('Invalid prescription credential')
                 e = Error(vc['credentialSubject']['id'],'Invalid prescription credential')
                 errors.append(e.to_dict())
-                continue
+                break # TODO: fix to break nested loop
             
             # we need to save the drug to know the price and the refund percentage
             prId_dict[ vc["credentialSubject"]["id"] ] = vc["credentialSubject"]["drug"]
@@ -120,15 +120,16 @@ async def create_refund():
             e = Error(tx, 'Error while reading blockchain')
             errors.append(e.to_dict())
 
-        # check prId from order
+        # TODO: check prId from order
         for p in order['prescriptions']:
             """
             if p['prId'] not in prId_list:
                 e = Error(order['orderId'], 'Order contains a invalid prescription id ')
                 errors.append(e.to_dict())
                 break  # order is not valid so skip to next
-            """
             p['drug'] = prId_dict[ p['prId'] ]
+            """
+
             
         # orderId must be unique to avoid duplicate refund
         dbc = dbConnector(app.config['MODE'], hostname)

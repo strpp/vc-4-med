@@ -67,6 +67,11 @@ function sendVpsToInsurance(data){
         $.ajax({
             type: 'POST',
             url: `${insuranceEndpoint}/refund`,
+            crossDomain: true,
+            headers: {
+                "accept": "application/json",
+                "Access-Control-Allow-Origin":"*"
+            },
             contentType: 'application/json',
             data: JSON.stringify(data),
             success: function(response) {
