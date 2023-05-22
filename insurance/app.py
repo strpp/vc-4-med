@@ -34,6 +34,10 @@ bp = blockchainPayer(
 )
 
 hostname = socket.gethostname()
+if(hostname == 'raspberrypi'):
+    pharma_ip = socket.gethostbyname(hostname)
+else:
+    pharma_ip = '172.21.0.4' 
 
 @app.route('/')
 def index():
@@ -187,7 +191,7 @@ async def emit_refund():
     
     # notify pharma about refund success
     order_ids = list(map(lambda x: x.get('id'), refunds))
-    res = requests.post('http://192.168.1.20:5001/api/credentials/true', json={'order_ids': order_ids})
+    res = requests.post(f'http://{pharma_ip}:5001/api/credentials/true', json={'order_ids': order_ids})
     
     return jsonify({'errors': errors, 'refunds': refunds})
 
